@@ -562,6 +562,14 @@ function showResolveForm(threadId) {
 // ─── Thread actions ───────────────────────────────────────────────────────────
 
 function openThread(id) {
+  if (sidebar && sidebar.classList.contains('collapsed')) {
+    sidebar.classList.remove('collapsed');
+    sidebarResizer.classList.remove('hidden');
+    btnSidebarToggle.innerHTML = '&#x00BB;';
+    btnSidebarToggle.title = 'Hide sidebar';
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
+  }
+
   const prevResolved = state.activeThreadId
     ? state.threads.find(t => t.id === state.activeThreadId)?.resolved
     : false;
@@ -774,7 +782,79 @@ btnMarkdown.addEventListener('click', () => {
   renderView();
 });
 
+// ─── Sidebar resize / collapse ────────────────────────────────────────────────
+
+const sidebar = document.getElementById('sidebar');
+const sidebarResizer = document.getElementById('sidebar-resizer');
+const btnSidebarToggle = document.getElementById('btn-sidebar-toggle');
+
+const SIDEBAR_WIDTH_KEY = 'sidecar_sidebar_width';
+const SIDEBAR_COLLAPSED_KEY = 'sidecar_sidebar_collapsed';
+
+function initSidebar() {
+  if (!sidebar || !sidebarResizer || !btnSidebarToggle) return;
+  const collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+  const savedWidth = parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || 320;
+  sidebar.style.width = savedWidth + 'px';
+  if (collapsed) {
+    sidebar.classList.add('collapsed');
+    sidebarResizer.classList.add('hidden');
+    btnSidebarToggle.innerHTML = '&#x00AB;';
+    btnSidebarToggle.title = 'Show sidebar';
+  }
+}
+
+if (btnSidebarToggle) {
+  btnSidebarToggle.addEventListener('click', () => {
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    if (isCollapsed) {
+      sidebar.classList.remove('collapsed');
+      sidebarResizer.classList.remove('hidden');
+      btnSidebarToggle.innerHTML = '&#x00BB;';
+      btnSidebarToggle.title = 'Hide sidebar';
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
+    } else {
+      sidebar.classList.add('collapsed');
+      sidebarResizer.classList.add('hidden');
+      btnSidebarToggle.innerHTML = '&#x00AB;';
+      btnSidebarToggle.title = 'Show sidebar';
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'true');
+    }
+  });
+}
+
+let _isResizing = false;
+
+if (sidebarResizer) {
+  sidebarResizer.addEventListener('mousedown', (e) => {
+    _isResizing = true;
+    sidebarResizer.classList.add('dragging');
+    sidebar.style.transition = 'none';
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!_isResizing) return;
+  const layoutRect = document.querySelector('.layout').getBoundingClientRect();
+  const newWidth = Math.max(200, Math.min(600, layoutRect.right - e.clientX));
+  sidebar.style.width = newWidth + 'px';
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, newWidth);
+});
+
+document.addEventListener('mouseup', () => {
+  if (!_isResizing) return;
+  _isResizing = false;
+  sidebarResizer.classList.remove('dragging');
+  sidebar.style.transition = '';
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
+initSidebar();
 updateAuthorDisplay();
 load();

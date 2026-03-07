@@ -138,6 +138,7 @@ function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, sty
       <button id="btn-preview" class="active">Preview</button>
       <button id="btn-markdown">Markdown</button>
     </div>
+    <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" title="Hide sidebar">&#x00BB;</button>
   </header>
 
   <div class="author-bar">
@@ -149,7 +150,9 @@ function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, sty
       <div class="doc-content" id="doc-content">Loading...</div>
     </div>
 
-    <aside class="sidebar">
+    <div class="sidebar-resizer" id="sidebar-resizer"></div>
+
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-header" id="sidebar-header">
         Comments <span id="comment-count">0</span>
       </div>
