@@ -30,6 +30,52 @@
 
     header span { opacity: 0.5; font-weight: 400; }
 
+    .view-toggle {
+      margin-left: auto;
+      display: flex;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .view-toggle button {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.5);
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .view-toggle button.active {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    .view-toggle button:hover:not(.active) { color: rgba(255,255,255,0.8); }
+
+    /* Markdown source view */
+    .md-source {
+      font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #1e293b;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      padding: 0;
+    }
+
+    .md-source mark.cmt-highlight {
+      border-radius: 2px;
+      padding: 1px 0;
+    }
+
     .layout {
       display: flex;
       flex: 1;
@@ -277,6 +323,10 @@
 <body>
   <header>
     Markdown Comment Sidecar <span>POC</span>
+    <div class="view-toggle">
+      <button id="btn-preview" class="active">Preview</button>
+      <button id="btn-markdown">Markdown</button>
+    </div>
   </header>
 
   <div class="layout">

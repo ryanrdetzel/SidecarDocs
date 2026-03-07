@@ -1,9 +1,11 @@
 // State
 let state = {
   markdown: '',
+  html: '',
   comments: [],
   selection: null, // { text, offset }
   activeCommentId: null,
+  view: 'preview', // 'preview' | 'markdown'
 };
 
 // DOM refs
@@ -16,6 +18,8 @@ const modalSelectedText = document.getElementById('modal-selected-text');
 const commentInput = document.getElementById('comment-input');
 const modalCancel = document.getElementById('modal-cancel');
 const modalSubmit = document.getElementById('modal-submit');
+const btnPreview = document.getElementById('btn-preview');
+const btnMarkdown = document.getElementById('btn-markdown');
 
 // ─── Offset mapping ───────────────────────────────────────────────────────────
 //
@@ -95,16 +99,60 @@ function wrapRange(startNode, startOffset, endNode, endOffset, commentId, orphan
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 async function load() {
   const res = await fetch('/api/document');
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to load document');
   state.markdown = data.markdown;
+  state.html = data.html;
   state.comments = data.comments;
 
-  docContent.innerHTML = data.html;
-  highlightComments();
+  renderView();
   renderSidebar();
+}
+
+function renderView() {
+  if (state.view === 'markdown') {
+    renderMarkdownView();
+  } else {
+    renderPreviewView();
+  }
+}
+
+function renderPreviewView() {
+  docContent.innerHTML = state.html;
+  highlightComments();
+  addBtn.style.display = 'none';
+}
+
+function renderMarkdownView() {
+  addBtn.style.display = 'none';
+
+  // Build highlighted markdown source
+  const md = state.markdown;
+  const active = state.comments
+    .filter(c => !c.orphaned && c.currentOffset >= 0)
+    .map(c => ({ start: c.currentOffset, end: c.currentOffset + c.anchor.context.length, id: c.id }))
+    .sort((a, b) => a.start - b.start);
+
+  let html = '';
+  let pos = 0;
+  for (const cmt of active) {
+    if (cmt.start < pos) continue; // skip overlapping
+    html += escapeHtml(md.slice(pos, cmt.start));
+    html += `<mark class="cmt-highlight" data-cmt-id="${cmt.id}">${escapeHtml(md.slice(cmt.start, cmt.end))}</mark>`;
+    pos = cmt.end;
+  }
+  html += escapeHtml(md.slice(pos));
+
+  docContent.innerHTML = `<pre class="md-source">${html}</pre>`;
+  docContent.querySelectorAll('mark.cmt-highlight').forEach(m => {
+    m.addEventListener('click', () => activateComment(m.dataset.cmtId));
+  });
 }
 
 function highlightComments() {
@@ -185,10 +233,12 @@ function activateComment(id) {
     c.classList.toggle('active', c.dataset.id === id);
   });
 
-  // Update mark active state
+  // Update mark active state and scroll active mark into view
   document.querySelectorAll('mark.cmt-highlight').forEach(m => {
     m.classList.toggle('active', m.dataset.cmtId === id);
   });
+  const activeMark = document.querySelector(`mark.cmt-highlight[data-cmt-id="${id}"]`);
+  if (activeMark) activeMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   // Scroll sidebar card into view
   const card = document.querySelector(`.comment-card[data-id="${id}"]`);
@@ -203,6 +253,7 @@ function getMarkdownOffset(selectedText) {
 }
 
 document.addEventListener('mouseup', (e) => {
+  if (state.view === 'markdown') return;
   if (e.target === addBtn || modal.contains(e.target)) return;
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
@@ -300,6 +351,24 @@ async function deleteComment(id) {
   if (state.activeCommentId === id) state.activeCommentId = null;
   await load();
 }
+
+// ─── View toggle ──────────────────────────────────────────────────────────────
+
+btnPreview.addEventListener('click', () => {
+  if (state.view === 'preview') return;
+  state.view = 'preview';
+  btnPreview.classList.add('active');
+  btnMarkdown.classList.remove('active');
+  renderView();
+});
+
+btnMarkdown.addEventListener('click', () => {
+  if (state.view === 'markdown') return;
+  state.view = 'markdown';
+  btnMarkdown.classList.add('active');
+  btnPreview.classList.remove('active');
+  renderView();
+});
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
