@@ -869,17 +869,31 @@ document.addEventListener('mouseup', (e) => {
     return;
   }
 
+  // If the selection spans multiple blocks, collapse it to end at the first block boundary
+  const endBlockEl = getBlockElement(range.endContainer);
+  let crossBlock = false;
+  if (endBlockEl && endBlockEl !== blockEl) {
+    crossBlock = true;
+    range.setEndAfter(blockEl);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  const trimmedText = sel.toString().trim();
+
   state.selection = {
     elementType: blockEl.tagName.toLowerCase(),
     elementIndex: getElementIndex(blockEl),
     elementText: blockEl.textContent.trim().slice(0, 80),
-    selectedText: selectedText.length <= 200 ? selectedText : selectedText.slice(0, 200) + '…',
+    selectedText: trimmedText.length <= 200 ? trimmedText : trimmedText.slice(0, 200) + '…',
+    crossBlock,
   };
 
   const rect = range.getBoundingClientRect();
   addBtn.style.display = 'block';
   addBtn.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
   addBtn.style.top = `${rect.top + window.scrollY - 36}px`;
+  addBtn.title = crossBlock ? 'Selection trimmed to one section' : '';
 });
 
 addBtn.addEventListener('click', () => {
@@ -897,6 +911,17 @@ addBtn.addEventListener('click', () => {
 function openCommentModal() {
   // Show the selected words as context in the modal
   modalSelectedText.textContent = state.selection.selectedText || state.selection.elementText;
+
+  // Show a note if the selection was trimmed to a single block
+  const existingNote = modal.querySelector('.cross-block-note');
+  if (existingNote) existingNote.remove();
+  if (state.selection.crossBlock) {
+    const note = document.createElement('div');
+    note.className = 'cross-block-note';
+    note.textContent = 'Selection trimmed to one section — comments are per block.';
+    modalSelectedText.after(note);
+  }
+
   commentInput.value = '';
   modal.classList.add('open');
   commentInput.focus();

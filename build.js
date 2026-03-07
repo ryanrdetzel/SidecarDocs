@@ -94,8 +94,14 @@ function findMarkdownFiles(dir, base = dir) {
 // and making IDs non-guessable without knowing the siteId.
 
 function makeDocumentId(filePath, inputDir, siteId, frontmatterId) {
+  if (frontmatterId && /^[0-9a-f]{32}$/.test(frontmatterId)) {
+    return frontmatterId;
+  }
+
+  const relPath = path.relative(path.resolve(inputDir), filePath).replace(/\\/g, '/').replace(/\.md$/, '');
   const docPath = frontmatterId
-    || path.relative(path.resolve(inputDir), filePath).replace(/\\/g, '/').replace(/\.md$/, '');
+    ? path.dirname(relPath).replace(/\\/g, '/') + '/' + frontmatterId
+    : relPath;
 
   return crypto
     .createHash('sha256')

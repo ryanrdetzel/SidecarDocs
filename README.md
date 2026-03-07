@@ -1,17 +1,19 @@
 # markdown-comment-sidecar
 
-A proof-of-concept for adding threaded comments to a markdown document without touching the source file. Comments live in a sidecar `comments.json` and are re-anchored to the document on every load, so they survive edits to the surrounding text.
+A proof-of-concept for adding threaded comments to markdown documents without touching the source files. Comments live in a SQLite database and are anchored to document elements, so they survive edits to the surrounding text.
 
 ## Features
 
-- **Non-destructive** — the markdown source is never modified
+- **Non-destructive** — markdown source is never modified
 - **Threaded conversations** — each annotation is a thread; anyone can reply
-- **Fuzzy re-anchoring** — comments stay attached to their text even as the document is edited
+- **Element-based anchoring** — comments anchor to heading/paragraph elements, not character offsets
 - **Resolve workflow** — resolve threads with an optional closure comment; resolved threads move to a separate tab
 - **Two views** — toggle between rendered preview and raw markdown source; highlights appear in both
 - **Orphan detection** — if anchor text is deleted, the comment is flagged as orphaned rather than silently lost
+- **Multi-document** — one server handles many documents, each scoped by a stable document ID
+- **Static site build** — generate self-contained HTML pages from a directory of markdown files
 
-## Quick start
+## Quick start (dev)
 
 ```bash
 npm install
@@ -19,64 +21,81 @@ npm start
 # open http://localhost:3000
 ```
 
-## How to use
+In dev mode, all comments are scoped to document ID `local`.
 
-### Adding a comment
+## Static site build
 
-1. Select any text in the document
-2. Click the **+ Add Comment** button that appears above the selection
-3. Type your comment and submit (or Cmd/Ctrl+Enter)
+Use `build.js` to generate annotated HTML pages from a directory of `.md` files.
 
-The selected text is highlighted in yellow. The comment appears in the sidebar.
+```bash
+node build.js \
+  --input ./docs \
+  --output ./dist \
+  --server http://localhost:3000 \
+  --site-id demo
+```
 
-### Replying
+The `--site-id` is a secret salt used to generate stable, non-guessable document IDs. Generate one for production and keep it stable:
 
-Click any comment card in the sidebar to open the thread view. Type in the reply box at the bottom and hit **Reply** (or Cmd/Ctrl+Enter).
+```bash
+node -e "console.log(require('crypto').randomUUID())" > .site-id
+node build.js --input ./docs --output ./dist \
+  --server https://comments.example.com \
+  --site-id $(cat .site-id)
+```
 
-### Resolving a thread
+> **Important:** changing the site ID reassigns all document IDs, orphaning existing comments.
 
-From the thread view, use the green **Resolve** button:
+### Document IDs
 
-- **Resolve** — marks the thread resolved immediately
-- **▾ → Resolve with comment** — expands a form to add a final note explaining the resolution before closing
+Each document gets a stable ID computed as:
 
-Resolved threads move to the **Resolved** tab in the sidebar. Their document highlight is removed; it reappears temporarily when you open the thread from the sidebar.
+```
+sha256(siteId + ':' + relativeFilePath).slice(0, 32)
+```
 
-### Switching views
+You can override this by adding an `id` field to a document's frontmatter:
 
-The **Preview / Markdown** toggle in the top-right switches between the rendered HTML view and the raw markdown source. Comments can be added and viewed in either mode.
+```yaml
+---
+id: my-doc-slug
+---
+```
 
-## How anchoring works
+Or pin it to a specific hash (e.g. to preserve existing comments after a file rename):
 
-When you select text, the system records:
+```yaml
+---
+id: 203c2041d628f30e008ce7c34f35c4e1
+---
+```
 
-- **context** — the selected text itself
-- **prefix** — 20 characters before the selection
-- **suffix** — 20 characters after the selection
-- **offset_guess** — character position in the markdown source
-
-On every page load, each comment is re-anchored against the current markdown source. For short patterns the library uses fuzzy (bitap) matching; for longer selections it falls back to exact `indexOf`. If the text can no longer be found, the comment is marked **orphaned** and shown in red.
+A 32-char hex `id` is used as-is. Any other string is scoped to the file's directory and hashed with the site ID.
 
 ## Project structure
 
 ```
-server.js        Express server, re-anchoring logic, REST API
+server.js        Express server + REST API
+build.js         Static site generator
 public/
   index.html     HTML shell + all CSS
   app.js         All frontend logic (vanilla JS)
-sample.md        The document being annotated
-comments.json    Thread storage (created automatically)
+sample.md        Document used in dev mode
+docs/            Source markdown files for the build
+dist/            Build output (gitignored)
+comments.db      Thread storage (gitignored)
 ```
 
 ## API
 
 | Endpoint | Method | Body | Description |
 |---|---|---|---|
-| `/api/document` | GET | — | Rendered HTML, markdown source, and re-anchored threads |
-| `/api/comment` | POST | `{ text, selectedText, offset }` | Create a new thread |
+| `/api/document?documentId=` | GET | — | Rendered HTML, markdown source, and threads |
+| `/api/threads?documentId=` | GET | — | Threads only |
+| `/api/comment` | POST | `{ documentId, text, elementType, elementIndex, elementText, selectedText }` | Create a new thread |
 | `/api/thread/:id/reply` | POST | `{ text }` | Add a reply to a thread |
 | `/api/thread/:id/resolve` | POST | `{ comment? }` | Resolve a thread |
-| `/api/thread/:id` | DELETE | — | Delete a thread entirely |
+| `/api/thread/:id` | DELETE | — | Delete a thread |
 
 ## Dependencies
 
@@ -84,4 +103,4 @@ comments.json    Thread storage (created automatically)
 |---|---|
 | `express` | HTTP server |
 | `marked` | Markdown → HTML rendering |
-| `diff-match-patch` | Fuzzy text matching for re-anchoring |
+| `better-sqlite3` | Thread storage |
