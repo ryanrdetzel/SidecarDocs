@@ -127,8 +127,16 @@ function reAnchor(thread) {
   let idx = markdown.indexOf(anchor.context, start);
   if (idx === -1) idx = markdown.indexOf(anchor.context);
 
-  if (idx === -1) return { ...thread, currentOffset: -1, orphaned: true };
-  return { ...thread, currentOffset: idx, orphaned: false };
+  if (idx !== -1) return { ...thread, currentOffset: idx, orphaned: false };
+
+  // Markdown search failed — anchor context may be rendered text with formatting stripped
+  // (bold, italic, list prefixes, etc.). Fall back to the rendered DOM so the thread
+  // still shows in preview even though markdown-view highlight won't work.
+  if (findTextInDOM(docContent, anchor.context)) {
+    return { ...thread, currentOffset: -1, orphaned: false };
+  }
+
+  return { ...thread, currentOffset: -1, orphaned: true };
 }
 
 // ─── Offset mapping ───────────────────────────────────────────────────────────
@@ -692,18 +700,36 @@ document.addEventListener('mouseup', (e) => {
     return;
   }
 
-  const offset = state.markdown.indexOf(text);
-  if (offset === -1) {
+  // Validate the selection exists in the rendered DOM (the same source as sel.toString()).
+  // This is more reliable than searching raw markdown, which has formatting characters
+  // (**, _, >, 1., etc.) that are stripped in the rendered view.
+  //
+  // Cross-block issue: sel.toString() adds \n at block element boundaries (e.g. <p>→<p>),
+  // but text nodes have no such separator. Strip those boundary \n before searching.
+  let anchorText = text;
+  if (!findTextInDOM(docContent, text) && text.includes('\n')) {
+    const stripped = text.replace(/\n/g, '');
+    if (stripped.length >= 2 && findTextInDOM(docContent, stripped)) {
+      anchorText = stripped;
+    } else {
+      addBtn.style.display = 'none';
+      state.selection = null;
+      return;
+    }
+  } else if (!findTextInDOM(docContent, text)) {
     addBtn.style.display = 'none';
     state.selection = null;
     return;
   }
 
+  // Best-effort markdown offset for the markdown-view highlight. Falls back to 0
+  // for selections over formatted text where the rendered text isn't in the markdown.
+  const mdOffset = state.markdown.indexOf(anchorText);
   const CONTEXT_LEN = 20;
-  const prefix = state.markdown.slice(Math.max(0, offset - CONTEXT_LEN), offset);
-  const suffix = state.markdown.slice(offset + text.length, offset + text.length + CONTEXT_LEN);
+  const prefix = mdOffset !== -1 ? state.markdown.slice(Math.max(0, mdOffset - CONTEXT_LEN), mdOffset) : '';
+  const suffix = mdOffset !== -1 ? state.markdown.slice(mdOffset + anchorText.length, mdOffset + anchorText.length + CONTEXT_LEN) : '';
 
-  state.selection = { text, offset, prefix, suffix };
+  state.selection = { text: anchorText, offset: mdOffset !== -1 ? mdOffset : 0, prefix, suffix };
 
   const rect = range.getBoundingClientRect();
   addBtn.style.display = 'block';
