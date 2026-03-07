@@ -1,46 +1,167 @@
 [
   {
-    "id": "cmt_1772884135764",
-    "text": "test comment",
+    "id": "cmt_test_1",
+    "text": "Test comment on: The Complete Guide to Modern Software En",
     "anchor": {
-      "context": "Writing is a craft",
-      "prefix": "The Art of Writing\n\n",
-      "suffix": " that takes years to",
-      "offset_guess": 22
+      "context": "The Complete Guide to Modern Software Engineering",
+      "prefix": "# ",
+      "suffix": "\n\nA comprehensive re",
+      "offset_guess": 2
     },
-    "createdAt": "2026-03-07T11:48:55.764Z"
+    "createdAt": "2026-03-07T12:12:55.219Z"
   },
   {
-    "id": "cmt_1772884449978",
-    "text": "sdf",
+    "id": "cmt_test_2",
+    "text": "Test comment on: Version Control Discipline",
     "anchor": {
-      "context": "tone",
-      "prefix": "tinctly yours — the ",
-      "suffix": ", the rhythm, the wo",
-      "offset_guess": 390
+      "context": "Version Control Discipline",
+      "prefix": "as one.\n\n---\n\n## 2. ",
+      "suffix": "\n\nVersion control is",
+      "offset_guess": 2067
     },
-    "createdAt": "2026-03-07T11:54:09.979Z"
+    "createdAt": "2026-03-07T12:12:55.219Z"
   },
   {
-    "id": "cmt_1772884454589",
-    "text": "fff",
+    "id": "cmt_test_3",
+    "text": "Test comment on: code that can be read, understood, and c",
     "anchor": {
-      "context": "what makes them different",
-      "prefix": " before discovering ",
-      "suffix": ". This is not wasted",
-      "offset_guess": 544
+      "context": "code that can be read, understood, and changed by humans",
+      "prefix": " that works — it is ",
+      "suffix": ". The machine does n",
+      "offset_guess": 338
     },
-    "createdAt": "2026-03-07T11:54:14.589Z"
+    "createdAt": "2026-03-07T12:12:55.219Z"
   },
   {
-    "id": "cmt_1772884716947",
-    "text": "fff",
+    "id": "cmt_test_4",
+    "text": "Test comment on: The machine does not care about your var",
     "anchor": {
-      "context": "another and most of them started badly.",
-      "prefix": " started somewhere, ",
-      "suffix": "\n\n## Finding Your Vo",
-      "offset_guess": 180
+      "context": "The machine does not care about your variable names",
+      "prefix": " changed by humans. ",
+      "suffix": " or your indentation",
+      "offset_guess": 396
     },
-    "createdAt": "2026-03-07T11:58:36.947Z"
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_5",
+    "text": "Test comment on: itemsById[item.id] = item;",
+    "anchor": {
+      "context": "itemsById[item.id] = item;",
+      "prefix": "st item of arr) {\n  ",
+      "suffix": "\n}\n```\n\nThe second v",
+      "offset_guess": 983
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_6",
+    "text": "Test comment on: Pronounceable",
+    "anchor": {
+      "context": "Pronounceable",
+      "prefix": "al properties:\n\n- **",
+      "suffix": "**: if you cannot sa",
+      "offset_guess": 1289
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_7",
+    "text": "Test comment on: There are only two hard things in Comput",
+    "anchor": {
+      "context": "There are only two hard things in Computer Science",
+      "prefix": " not a hash map\n\n> \"",
+      "suffix": ": cache invalidation",
+      "offset_guess": 1638
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_8",
+    "text": "Test comment on: Never force-push to a shared branch",
+    "anchor": {
+      "context": "Never force-push to a shared branch",
+      "prefix": " are universal:\n\n1. ",
+      "suffix": "\n2. Keep feature bra",
+      "offset_guess": 3515
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_9",
+    "text": "Test comment on: Trunk-based",
+    "anchor": {
+      "context": "Trunk-based",
+      "prefix": "e |\n|---|---|---|\n| ",
+      "suffix": " | Continuous delive",
+      "offset_guess": 3192
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_10",
+    "text": "Test comment on: Assume your dependencies are reliable",
+    "anchor": {
+      "context": "Assume your dependencies are reliable",
+      "prefix": "ning for Failure\n\n~~",
+      "suffix": ".~~ Assume everythin",
+      "offset_guess": 7858
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_11",
+    "text": "Test comment on: Unhandled promise rejections",
+    "anchor": {
+      "context": "Unhandled promise rejections",
+      "prefix": "three things:\n\n1. **",
+      "suffix": "** — always return o",
+      "offset_guess": 5514
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_12",
+    "text": "Test comment on: Broken Access Control",
+    "anchor": {
+      "context": "Broken Access Control",
+      "prefix": "over the years:\n\n1. ",
+      "suffix": "\n2. Cryptographic Fa",
+      "offset_guess": 10690
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_13",
+    "text": "Test comment on: Software engineering is a craft that rew",
+    "anchor": {
+      "context": "Software engineering is a craft that rewards lifelong learning",
+      "prefix": "---\n\n## Conclusion\n\n",
+      "suffix": ". The fundamentals —",
+      "offset_guess": 14092
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_14",
+    "text": "Test comment on: SELECT *",
+    "anchor": {
+      "context": "SELECT *",
+      "prefix": "ting everything**: `",
+      "suffix": "` when you need two ",
+      "offset_guess": 9588
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
+  },
+  {
+    "id": "cmt_test_15",
+    "text": "Test comment on: Premature optimization is the root of al",
+    "anchor": {
+      "context": "Premature optimization is the root of all evil",
+      "prefix": "re You Optimize\n\n> \"",
+      "suffix": ".\"\n> — Donald Knuth\n",
+      "offset_guess": 8492
+    },
+    "createdAt": "2026-03-07T12:12:55.219Z"
   }
 ]
