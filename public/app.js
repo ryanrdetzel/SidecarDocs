@@ -1,4 +1,30 @@
-// State
+// ─── Config ───────────────────────────────────────────────────────────────────
+// In static-site mode, window.SIDECAR_CONFIG is injected by the build step.
+// In local dev mode, we fall back to same-origin with documentId 'local'.
+
+const config = window.SIDECAR_CONFIG || {
+  serverUrl: '',          // empty = same origin
+  documentId: 'local',
+};
+
+function apiUrl(path) {
+  return config.serverUrl + path;
+}
+
+// ─── Author / identity ────────────────────────────────────────────────────────
+
+const AUTHOR_KEY = 'sidecar_author';
+
+function getAuthor() {
+  return localStorage.getItem(AUTHOR_KEY) || null;
+}
+
+function setAuthor(name) {
+  localStorage.setItem(AUTHOR_KEY, name.trim());
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
 let state = {
   markdown: '',
   html: '',
@@ -10,7 +36,8 @@ let state = {
   activeThreadId: null,
 };
 
-// DOM refs
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+
 const docContent = document.getElementById('doc-content');
 const commentsList = document.getElementById('comments-list');
 const commentCount = document.getElementById('comment-count');
@@ -25,8 +52,70 @@ const modalCancel = document.getElementById('modal-cancel');
 const modalSubmit = document.getElementById('modal-submit');
 const btnPreview = document.getElementById('btn-preview');
 const btnMarkdown = document.getElementById('btn-markdown');
+const authorDisplay = document.getElementById('author-display');
+const nameModal = document.getElementById('name-modal');
+const nameInput = document.getElementById('name-input');
+const nameSubmit = document.getElementById('name-submit');
 
-// ─── Offset mapping ────────────────────────────────────────────────────────────
+// ─── Author UI ────────────────────────────────────────────────────────────────
+
+function updateAuthorDisplay() {
+  const name = getAuthor();
+  if (name) {
+    authorDisplay.innerHTML = `Commenting as <strong>${escapeHtml(name)}</strong> · <button id="change-name-btn">change</button>`;
+    document.getElementById('change-name-btn').addEventListener('click', showNameModal);
+  } else {
+    authorDisplay.innerHTML = `<button id="set-name-btn">Set your name to comment</button>`;
+    document.getElementById('set-name-btn').addEventListener('click', showNameModal);
+  }
+}
+
+function showNameModal(onComplete) {
+  nameInput.value = getAuthor() || '';
+  nameModal.classList.add('open');
+  nameInput.focus();
+  nameSubmit._onComplete = typeof onComplete === 'function' ? onComplete : null;
+}
+
+function closeNameModal() {
+  nameModal.classList.remove('open');
+}
+
+nameSubmit.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  setAuthor(name);
+  closeNameModal();
+  updateAuthorDisplay();
+  if (nameSubmit._onComplete) nameSubmit._onComplete();
+});
+
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') nameSubmit.click();
+  if (e.key === 'Escape') closeNameModal();
+});
+
+nameModal.addEventListener('click', e => { if (e.target === nameModal) closeNameModal(); });
+
+// ─── Re-anchoring (client-side) ───────────────────────────────────────────────
+// The server stores raw anchor data; the client resolves current positions
+// against the markdown it has in memory.
+
+function reAnchor(thread) {
+  const { anchor } = thread;
+  const markdown = state.markdown;
+
+  // Try near the original offset first (handles minor edits),
+  // then fall back to a full scan.
+  const start = Math.max(0, anchor.offset_guess - anchor.context.length);
+  let idx = markdown.indexOf(anchor.context, start);
+  if (idx === -1) idx = markdown.indexOf(anchor.context);
+
+  if (idx === -1) return { ...thread, currentOffset: -1, orphaned: true };
+  return { ...thread, currentOffset: idx, orphaned: false };
+}
+
+// ─── Offset mapping ───────────────────────────────────────────────────────────
 
 function findTextInDOM(root, searchText) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -93,15 +182,37 @@ function escapeHtml(str) {
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
 async function load() {
-  const res = await fetch('/api/document');
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to load document');
-  state.markdown = data.markdown;
-  state.html = data.html;
-  state.threads = data.threads;
+  // For static sites, HTML is pre-rendered and markdown is embedded in the page.
+  // For local dev, we fetch both from the server.
+  if (window.SIDECAR_CONFIG && window.SIDECAR_CONFIG.markdown) {
+    // Static site mode: markdown embedded at build time
+    state.markdown = window.SIDECAR_CONFIG.markdown;
+    state.html = window.SIDECAR_CONFIG.html || '';
+  } else {
+    // Local dev mode: fetch document from server
+    const res = await fetch(apiUrl(`/api/document?documentId=${encodeURIComponent(config.documentId)}`));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load document');
+    state.markdown = data.markdown;
+    state.html = data.html;
+  }
 
+  // Render document immediately so the page isn't stuck on "Loading..."
+  // even if the thread server is unreachable.
   renderView();
   renderSidebar();
+
+  // Fetch threads separately — fail gracefully if server is down or unreachable.
+  try {
+    const threadsRes = await fetch(apiUrl(`/api/threads?documentId=${encodeURIComponent(config.documentId)}`));
+    const threadsData = await threadsRes.json();
+    if (!threadsRes.ok) throw new Error(threadsData.error || 'Failed to load threads');
+    state.threads = threadsData.threads.map(reAnchor);
+    renderView();
+    renderSidebar();
+  } catch (err) {
+    console.warn('Could not load threads:', err.message);
+  }
 }
 
 function renderView() {
@@ -135,7 +246,6 @@ function highlightThreads() {
     }
   }
 
-  // Re-apply active state if a thread is open
   if (state.activeThreadId) {
     document.querySelectorAll('mark.cmt-highlight').forEach(m => {
       m.classList.toggle('active', m.dataset.cmtId === state.activeThreadId);
@@ -189,7 +299,6 @@ function renderThreadList() {
   const resolved = state.threads.filter(t => t.resolved);
   const shown = state.sidebarTab === 'resolved' ? resolved : active;
 
-  // Header: tabs
   sidebarHeader.innerHTML = '';
   const tabs = document.createElement('div');
   tabs.className = 'sidebar-tabs';
@@ -243,7 +352,6 @@ function renderThreadList() {
     card.appendChild(anchor);
     card.appendChild(firstEl);
 
-    // If resolved with a closure comment, show it as the last entry
     const lastText = thread.resolvedComment || (count > 1 ? last.text : null);
     if (lastText) {
       const sep = document.createElement('div');
@@ -261,10 +369,11 @@ function renderThreadList() {
     const meta = document.createElement('div');
     meta.className = 'comment-meta';
 
-    const date = document.createElement('span');
-    date.className = 'comment-date';
-    date.textContent = new Date(first.createdAt).toLocaleString();
-    meta.appendChild(date);
+    const authorDateEl = document.createElement('span');
+    authorDateEl.className = 'comment-date';
+    const authorStr = first.author ? `${first.author} · ` : '';
+    authorDateEl.textContent = authorStr + new Date(first.created_at || first.createdAt).toLocaleString();
+    meta.appendChild(authorDateEl);
 
     if (thread.resolved) {
       const badge = document.createElement('span');
@@ -287,7 +396,6 @@ function renderThreadList() {
 function renderThreadView(thread) {
   state.sidebarMode = 'thread';
 
-  // Header
   sidebarHeader.innerHTML = '';
   const back = document.createElement('button');
   back.className = 'thread-back';
@@ -295,7 +403,6 @@ function renderThreadView(thread) {
   back.addEventListener('click', closeThread);
   sidebarHeader.appendChild(back);
 
-  // Anchor quote
   const anchorEl = document.createElement('div');
   anchorEl.className = 'thread-anchor';
   const ctx = thread.anchor.context;
@@ -304,7 +411,6 @@ function renderThreadView(thread) {
   commentsList.innerHTML = '';
   commentsList.appendChild(anchorEl);
 
-  // Resolved banner
   if (thread.resolved) {
     const banner = document.createElement('div');
     banner.className = 'resolved-banner';
@@ -319,7 +425,6 @@ function renderThreadView(thread) {
     commentsList.appendChild(banner);
   }
 
-  // Messages
   for (const msg of thread.messages) {
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble';
@@ -331,17 +436,23 @@ function renderThreadView(thread) {
     const meta = document.createElement('div');
     meta.className = 'message-meta';
 
+    if (msg.author) {
+      const authorEl = document.createElement('span');
+      authorEl.className = 'message-author';
+      authorEl.textContent = msg.author;
+      meta.appendChild(authorEl);
+    }
+
     const date = document.createElement('span');
     date.className = 'message-date';
-    date.textContent = new Date(msg.createdAt).toLocaleString();
-
+    date.textContent = new Date(msg.created_at || msg.createdAt).toLocaleString();
     meta.appendChild(date);
+
     bubble.appendChild(text);
     bubble.appendChild(meta);
     commentsList.appendChild(bubble);
   }
 
-  // Reply area (hidden for resolved threads)
   if (thread.resolved) {
     replyArea.style.display = 'none';
     return;
@@ -350,8 +461,6 @@ function renderThreadView(thread) {
   replyArea.style.display = 'flex';
   replyInput.value = '';
 
-  // Build action row: [Delete] ... [Resolve▾] [Reply]
-  // Replace default reply-actions content each time
   const actionsRow = replyArea.querySelector('.reply-actions');
   actionsRow.innerHTML = '';
 
@@ -364,7 +473,6 @@ function renderThreadView(thread) {
   const rightBtns = document.createElement('div');
   rightBtns.style.cssText = 'display:flex; gap:6px; align-items:center;';
 
-  // Split resolve button
   const resolveGroup = document.createElement('div');
   resolveGroup.className = 'resolve-btn-group';
 
@@ -400,7 +508,6 @@ function renderThreadView(thread) {
   resolveGroup.appendChild(resolveArrow);
   resolveGroup.appendChild(dropdown);
 
-  // Reply button
   const replyBtn = document.createElement('button');
   replyBtn.className = 'btn-reply';
   replyBtn.textContent = 'Reply';
@@ -414,7 +521,6 @@ function renderThreadView(thread) {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitReply(thread.id);
   };
 
-  // Remove any lingering resolve form
   replyArea.querySelector('.resolve-form')?.remove();
 }
 
@@ -464,7 +570,6 @@ function openThread(id) {
   state.activeThreadId = id;
   state.sidebarMode = 'thread';
 
-  // Re-render view if resolved status changes (highlight needs to appear/disappear)
   if (prevResolved || nextResolved) {
     renderView();
   } else {
@@ -488,7 +593,7 @@ function closeThread() {
   state.sidebarMode = 'list';
 
   if (wasResolved) {
-    renderView(); // remove the resolved highlight that was temporarily shown
+    renderView();
   } else {
     document.querySelectorAll('mark.cmt-highlight').forEach(m => m.classList.remove('active'));
   }
@@ -500,13 +605,15 @@ async function submitReply(threadId) {
   const text = replyInput.value.trim();
   if (!text) return;
 
+  const author = getAuthor();
+
   const btn = replyArea.querySelector('.btn-reply');
   if (btn) btn.disabled = true;
   try {
-    const res = await fetch(`/api/thread/${threadId}/reply`, {
+    const res = await fetch(apiUrl(`/api/thread/${threadId}/reply`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, author }),
     });
     if (!res.ok) throw new Error('Failed to post reply');
     await load();
@@ -517,7 +624,7 @@ async function submitReply(threadId) {
 }
 
 async function resolveThread(threadId, comment) {
-  await fetch(`/api/thread/${threadId}/resolve`, {
+  await fetch(apiUrl(`/api/thread/${threadId}/resolve`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ comment }),
@@ -529,7 +636,7 @@ async function resolveThread(threadId, comment) {
 }
 
 async function deleteThread(id) {
-  await fetch(`/api/thread/${id}`, { method: 'DELETE' });
+  await fetch(apiUrl(`/api/thread/${id}`), { method: 'DELETE' });
   state.activeThreadId = null;
   state.sidebarMode = 'list';
   await load();
@@ -538,7 +645,7 @@ async function deleteThread(id) {
 // ─── Selection handling ───────────────────────────────────────────────────────
 
 document.addEventListener('mouseup', (e) => {
-  if (e.target === addBtn || modal.contains(e.target)) return;
+  if (e.target === addBtn || modal.contains(e.target) || nameModal.contains(e.target)) return;
 
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
@@ -568,7 +675,11 @@ document.addEventListener('mouseup', (e) => {
     return;
   }
 
-  state.selection = { text, offset };
+  const CONTEXT_LEN = 20;
+  const prefix = state.markdown.slice(Math.max(0, offset - CONTEXT_LEN), offset);
+  const suffix = state.markdown.slice(offset + text.length, offset + text.length + CONTEXT_LEN);
+
+  state.selection = { text, offset, prefix, suffix };
 
   const rect = range.getBoundingClientRect();
   addBtn.style.display = 'block';
@@ -579,11 +690,22 @@ document.addEventListener('mouseup', (e) => {
 addBtn.addEventListener('click', () => {
   if (!state.selection) return;
   addBtn.style.display = 'none';
+
+  // If no author set, prompt for name first, then open comment modal
+  if (!getAuthor()) {
+    showNameModal(() => openCommentModal());
+    return;
+  }
+
+  openCommentModal();
+});
+
+function openCommentModal() {
   modalSelectedText.textContent = state.selection.text;
   commentInput.value = '';
   modal.classList.add('open');
   commentInput.focus();
-});
+}
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
@@ -606,15 +728,21 @@ async function submitComment() {
   const text = commentInput.value.trim();
   if (!text || !state.selection) return;
 
+  const author = getAuthor();
+
   modalSubmit.disabled = true;
   try {
-    const res = await fetch('/api/comment', {
+    const res = await fetch(apiUrl('/api/comment'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        documentId: config.documentId,
         text,
+        author,
         selectedText: state.selection.text,
         offset: state.selection.offset,
+        prefix: state.selection.prefix,
+        suffix: state.selection.suffix,
       }),
     });
     if (!res.ok) throw new Error('Failed to save comment');
@@ -622,7 +750,6 @@ async function submitComment() {
     closeModal();
     state.selection = null;
     await load();
-    // Open the new thread immediately
     openThread(data.thread.id);
   } finally {
     modalSubmit.disabled = false;
@@ -649,4 +776,5 @@ btnMarkdown.addEventListener('click', () => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
+updateAuthorDisplay();
 load();

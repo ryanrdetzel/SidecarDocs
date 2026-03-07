@@ -26,6 +26,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-shrink: 0;
     }
 
     header span { opacity: 0.5; font-weight: 400; }
@@ -58,6 +59,33 @@
     }
 
     .view-toggle button:hover:not(.active) { color: rgba(255,255,255,0.8); }
+
+    /* Author bar */
+    .author-bar {
+      background: #f8f7ff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 6px 20px;
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    #author-display strong { color: #374151; }
+
+    #author-display button {
+      background: none;
+      border: none;
+      color: #7c3aed;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+    }
+
+    #author-display button:hover { text-decoration: underline; }
 
     /* Markdown source view */
     .md-source {
@@ -311,6 +339,12 @@
       margin-top: 6px;
     }
 
+    .message-author {
+      font-size: 11px;
+      font-weight: 600;
+      color: #7c3aed;
+    }
+
     .message-bubble .message-date {
       font-size: 10px;
       color: #d1d5db;
@@ -556,7 +590,7 @@
     .btn-resolve-confirm:hover { background: #15803d; }
 
     /* Add comment modal */
-    #comment-modal {
+    #comment-modal, #name-modal {
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.4);
@@ -566,7 +600,7 @@
       z-index: 200;
     }
 
-    #comment-modal.open { display: flex; }
+    #comment-modal.open, #name-modal.open { display: flex; }
 
     .modal-box {
       background: #fff;
@@ -577,6 +611,7 @@
     }
 
     .modal-box h3 { font-size: 15px; margin-bottom: 8px; }
+    .modal-box p { font-size: 13px; color: #6b7280; margin-bottom: 14px; }
 
     .modal-selected-text {
       background: #fef9c3;
@@ -591,18 +626,23 @@
       overflow-y: auto;
     }
 
+    .modal-box input[type="text"],
     .modal-box textarea {
       width: 100%;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       padding: 10px;
       font-size: 13px;
-      resize: vertical;
-      min-height: 80px;
       font-family: inherit;
       outline: none;
     }
 
+    .modal-box textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .modal-box input[type="text"]:focus,
     .modal-box textarea:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
 
     .modal-actions {
@@ -647,6 +687,10 @@
     </div>
   </header>
 
+  <div class="author-bar">
+    <span id="author-display"></span>
+  </div>
+
   <div class="layout">
     <div class="doc-pane">
       <div class="doc-content" id="doc-content">Loading...</div>
@@ -668,6 +712,7 @@
 
   <button id="add-comment-btn">+ Add Comment</button>
 
+  <!-- Comment modal -->
   <div id="comment-modal">
     <div class="modal-box">
       <h3>Add Comment</h3>
@@ -676,6 +721,18 @@
       <div class="modal-actions">
         <button class="btn-cancel" id="modal-cancel">Cancel</button>
         <button class="btn-submit" id="modal-submit">Add Comment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Name prompt modal -->
+  <div id="name-modal">
+    <div class="modal-box">
+      <h3>What's your name?</h3>
+      <p>Your name will appear on comments you write. It's saved in your browser.</p>
+      <input type="text" id="name-input" placeholder="e.g. Ryan" maxlength="60" />
+      <div class="modal-actions">
+        <button class="btn-submit" id="name-submit">Save &amp; Continue</button>
       </div>
     </div>
   </div>

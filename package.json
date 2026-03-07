@@ -4,9 +4,12 @@
   "description": "POC for commenting on markdown files without modifying source",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node build.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "cors": "^2.8.6",
     "diff-match-patch": "^1.0.5",
     "express": "^4.18.2",
     "marked": "^9.1.6"
