@@ -422,7 +422,7 @@ function renderThreadList() {
   }
 }
 
-function buildMessageBubble(msg) {
+function buildMessageBubble(msg, threadId) {
   const bubble = document.createElement('div');
   bubble.className = 'message-bubble';
 
@@ -433,21 +433,145 @@ function buildMessageBubble(msg) {
   const meta = document.createElement('div');
   meta.className = 'message-meta';
 
+  const metaLeft = document.createElement('span');
+  metaLeft.className = 'message-meta-left';
+
   if (msg.author) {
     const authorEl = document.createElement('span');
     authorEl.className = 'message-author';
     authorEl.textContent = msg.author;
-    meta.appendChild(authorEl);
+    metaLeft.appendChild(authorEl);
   }
 
   const date = document.createElement('span');
   date.className = 'message-date';
   date.textContent = new Date(msg.created_at || msg.createdAt).toLocaleString();
-  meta.appendChild(date);
+  if (msg.editedAt) date.title = 'Edited ' + new Date(msg.editedAt).toLocaleString();
+  metaLeft.appendChild(date);
+  meta.appendChild(metaLeft);
+
+  const currentAuthor = getAuthor();
+  if (currentAuthor && msg.author === currentAuthor && threadId) {
+    const actions = document.createElement('span');
+    actions.className = 'message-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'msg-action-link';
+    editBtn.textContent = 'edit';
+    editBtn.onclick = (e) => {
+      e.stopPropagation();
+      showMessageEditForm(msg, threadId, bubble, text);
+    };
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'msg-action-link msg-delete-link';
+    deleteBtn.textContent = 'delete';
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      showMessageDeleteConfirm(msg, threadId, bubble, deleteBtn);
+    };
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+    meta.appendChild(actions);
+  }
 
   bubble.appendChild(text);
   bubble.appendChild(meta);
   return bubble;
+}
+
+function showMessageEditForm(msg, threadId, bubble, textEl) {
+  if (bubble.querySelector('.msg-edit-form')) return;
+
+  const form = document.createElement('div');
+  form.className = 'msg-edit-form';
+
+  const ta = document.createElement('textarea');
+  ta.value = msg.text;
+  ta.rows = 3;
+
+  const formActions = document.createElement('div');
+  formActions.className = 'msg-edit-actions';
+
+  const cancel = document.createElement('button');
+  cancel.className = 'btn-cancel';
+  cancel.textContent = 'Cancel';
+  cancel.onclick = () => form.remove();
+
+  const save = document.createElement('button');
+  save.className = 'btn-save';
+  save.textContent = 'Save';
+  save.onclick = async () => {
+    const newText = ta.value.trim();
+    if (!newText || newText === msg.text) { form.remove(); return; }
+    save.disabled = true;
+    try {
+      const res = await fetch(apiUrl(`/api/message/${msg.id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newText }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      msg.text = newText;
+      textEl.textContent = newText;
+      form.remove();
+    } finally {
+      save.disabled = false;
+    }
+  };
+
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save.click();
+    if (e.key === 'Escape') form.remove();
+  });
+
+  formActions.appendChild(cancel);
+  formActions.appendChild(save);
+  form.appendChild(ta);
+  form.appendChild(formActions);
+  bubble.appendChild(form);
+  ta.focus();
+  ta.select();
+}
+
+function showMessageDeleteConfirm(msg, threadId, bubble, deleteBtn) {
+  if (bubble.querySelector('.msg-delete-confirm')) return;
+
+  const confirm = document.createElement('div');
+  confirm.className = 'msg-delete-confirm';
+
+  const label = document.createElement('span');
+  label.textContent = 'Delete this message?';
+
+  const yes = document.createElement('button');
+  yes.className = 'msg-action-link msg-delete-link';
+  yes.textContent = 'yes';
+  yes.onclick = async () => {
+    yes.disabled = true;
+    try {
+      const res = await fetch(apiUrl(`/api/message/${msg.id}`), { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      const data = await res.json();
+      if (data.threadDeleted) {
+        state.activeThreadId = null;
+        state.expandedThreadIds.clear();
+      }
+      await load();
+    } finally {
+      yes.disabled = false;
+    }
+  };
+
+  const no = document.createElement('button');
+  no.className = 'msg-action-link';
+  no.textContent = 'no';
+  no.onclick = () => confirm.remove();
+
+  confirm.appendChild(label);
+  confirm.appendChild(yes);
+  confirm.appendChild(no);
+  bubble.appendChild(confirm);
 }
 
 function buildThreadCard(thread) {
@@ -492,7 +616,7 @@ function buildThreadCard(thread) {
     }
 
     for (const msg of thread.messages) {
-      card.appendChild(buildMessageBubble(msg));
+      card.appendChild(buildMessageBubble(msg, thread.id));
     }
 
     if (!thread.resolved) {

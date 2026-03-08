@@ -13,42 +13,55 @@
 //   --assets-url URL    Base URL for sidecar.css and app.js (required)
 //   --watch             Re-build when input files change
 
-const fs = require('fs');
-const path = require('path');
-const { marked } = require('marked');
-const { parseFrontmatter, makeDocumentId, findMarkdownFiles } = require('./lib/document-id');
+const fs = require("fs");
+const path = require("path");
+const { marked } = require("marked");
+const {
+  parseFrontmatter,
+  makeDocumentId,
+  findMarkdownFiles,
+} = require("./lib/document-id");
 
 // ─── Args ─────────────────────────────────────────────────────────────────────
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const result = { input: './docs', output: './dist', server: null, siteId: null, assetsUrl: null, watch: false };
+  const result = {
+    input: "./docs",
+    output: "./dist",
+    server: null,
+    siteId: null,
+    assetsUrl: null,
+    watch: false,
+  };
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--input')      result.input     = args[++i];
-    if (args[i] === '--output')     result.output    = args[++i];
-    if (args[i] === '--server')     result.server    = args[++i];
-    if (args[i] === '--site-id')    result.siteId    = args[++i];
-    if (args[i] === '--assets-url') result.assetsUrl = args[++i];
-    if (args[i] === '--watch')      result.watch     = true;
+    if (args[i] === "--input") result.input = args[++i];
+    if (args[i] === "--output") result.output = args[++i];
+    if (args[i] === "--server") result.server = args[++i];
+    if (args[i] === "--site-id") result.siteId = args[++i];
+    if (args[i] === "--assets-url") result.assetsUrl = args[++i];
+    if (args[i] === "--watch") result.watch = true;
   }
 
   const missing = [];
-  if (!result.server) missing.push('--server <url>');
-  if (!result.siteId) missing.push('--site-id <token>');
-  if (!result.assetsUrl) missing.push('--assets-url <url>');
+  if (!result.server) missing.push("--server <url>");
+  if (!result.siteId) missing.push("--site-id <token>");
+  if (!result.assetsUrl) missing.push("--assets-url <url>");
 
   if (missing.length) {
-    console.error('Error: missing required flags: ' + missing.join(', '));
-    console.error('');
-    console.error('Example:');
-    console.error('  node build.js --input ./docs --output ./dist \\');
-    console.error('    --server https://comments.example.com \\');
-    console.error('    --site-id $(cat .site-id) \\');
-    console.error('    --assets-url https://cdn.example.com/sidecar');
-    console.error('');
-    console.error('Generate a site ID once and commit it:');
-    console.error('  node -e "console.log(require(\'crypto\').randomUUID())" > .site-id');
+    console.error("Error: missing required flags: " + missing.join(", "));
+    console.error("");
+    console.error("Example:");
+    console.error("  node build.js --input ./docs --output ./dist \\");
+    console.error("    --server https://comments.example.com \\");
+    console.error("    --site-id $(cat .site-id) \\");
+    console.error("    --assets-url https://cdn.example.com/sidecar");
+    console.error("");
+    console.error("Generate a site ID once and commit it:");
+    console.error(
+      "  node -e \"console.log(require('crypto').randomUUID())\" > .site-id",
+    );
     process.exit(1);
   }
 
@@ -57,7 +70,14 @@ function parseArgs() {
 
 // ─── HTML template ────────────────────────────────────────────────────────────
 
-function generateHtml({ title, documentId, serverUrl, assetsUrl, markdown, html }) {
+function generateHtml({
+  title,
+  documentId,
+  serverUrl,
+  assetsUrl,
+  markdown,
+  html,
+}) {
   const configJson = JSON.stringify({ serverUrl, documentId });
 
   return `<!DOCTYPE html>
@@ -70,7 +90,6 @@ function generateHtml({ title, documentId, serverUrl, assetsUrl, markdown, html 
 </head>
 <body>
   <header>
-    ${escapeHtml(title)} <span>· comments</span>
     <div class="header-controls">
       <select id="theme-select" class="theme-select" title="Change theme">
         <option value="classic">Classic</option>
@@ -152,35 +171,50 @@ ${html}
 
 function escapeHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // ─── Build ────────────────────────────────────────────────────────────────────
 
 function buildFile(filePath, opts) {
   const { inputDir, outputDir, serverUrl, siteId, assetsUrl } = opts;
-  const raw = fs.readFileSync(filePath, 'utf8');
+  const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
 
-  const documentId = makeDocumentId(filePath, inputDir, siteId, data.id || null);
+  const documentId = makeDocumentId(
+    filePath,
+    inputDir,
+    siteId,
+    data.id || null,
+  );
   const html = marked.parse(content);
 
   // Title: frontmatter title, first H1 in markdown, or filename
   let title = data.title;
   if (!title) {
     const h1 = content.match(/^#\s+(.+)/m);
-    title = h1 ? h1[1] : path.basename(filePath, '.md');
+    title = h1 ? h1[1] : path.basename(filePath, ".md");
   }
 
   // Output path mirrors input directory structure, .md → .html
   const rel = path.relative(path.resolve(inputDir), filePath);
-  const outPath = path.join(outputDir, rel.replace(/\.md$/, '.html'));
+  const outPath = path.join(outputDir, rel.replace(/\.md$/, ".html"));
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, assetsUrl, markdown: content, html }));
+  fs.writeFileSync(
+    outPath,
+    generateHtml({
+      title,
+      documentId,
+      serverUrl,
+      assetsUrl,
+      markdown: content,
+      html,
+    }),
+  );
 
   return { filePath, outPath, documentId };
 }
@@ -209,22 +243,26 @@ function build(args) {
   for (const f of files) {
     const result = buildFile(f, opts);
     const relOut = path.relative(process.cwd(), result.outPath);
-    console.log(`  ${path.relative(process.cwd(), f)} → ${relOut}  [${result.documentId}]`);
+    console.log(
+      `  ${path.relative(process.cwd(), f)} → ${relOut}  [${result.documentId}]`,
+    );
   }
 
   console.log(`\nDone. Output: ${outputDir}`);
-  console.log(`Site ID: ${siteId} (keep this stable — changing it reassigns all document IDs)`);
+  console.log(
+    `Site ID: ${siteId} (keep this stable — changing it reassigns all document IDs)`,
+  );
 }
 
 // ─── Watch mode ───────────────────────────────────────────────────────────────
 
 function watch(args) {
   build(args);
-  console.log('\nWatching for changes...');
+  console.log("\nWatching for changes...");
 
   const inputDir = path.resolve(args.input);
   fs.watch(inputDir, { recursive: true }, (event, filename) => {
-    if (!filename || !filename.endsWith('.md')) return;
+    if (!filename || !filename.endsWith(".md")) return;
     const filePath = path.join(inputDir, filename);
     if (!fs.existsSync(filePath)) return;
 
@@ -238,9 +276,14 @@ function watch(args) {
 
     try {
       const result = buildFile(filePath, opts);
-      console.log(`[${new Date().toLocaleTimeString()}] rebuilt ${path.relative(process.cwd(), result.outPath)}`);
+      console.log(
+        `[${new Date().toLocaleTimeString()}] rebuilt ${path.relative(process.cwd(), result.outPath)}`,
+      );
     } catch (err) {
-      console.error(`[${new Date().toLocaleTimeString()}] error building ${filename}:`, err.message);
+      console.error(
+        `[${new Date().toLocaleTimeString()}] error building ${filename}:`,
+        err.message,
+      );
     }
   });
 }

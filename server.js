@@ -11,11 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
 
-// In-memory index: threadId → documentId (populated when threads are read)
-const threadIndex = new Map();
+// In-memory indexes (populated when threads are read)
+const threadIndex = new Map();  // threadId → documentId
+const messageIndex = new Map(); // messageId → { documentId, threadId }
 
 function indexThreads(documentId, threads) {
-  for (const t of threads) threadIndex.set(t.id, documentId);
+  for (const t of threads) {
+    threadIndex.set(t.id, documentId);
+    for (const m of t.messages) {
+      messageIndex.set(m.id, { documentId, threadId: t.id });
+    }
+  }
 }
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
@@ -93,6 +99,7 @@ app.post('/api/comment', (req, res) => {
 
   store.addThread(documentId, thread);
   threadIndex.set(threadId, documentId);
+  messageIndex.set(messageId, { documentId, threadId });
   res.json({ success: true, thread });
 });
 
@@ -114,6 +121,7 @@ app.post('/api/thread/:id/reply', (req, res) => {
   const message = { id: messageId, text, author: author || null, createdAt: now };
 
   store.addReply(documentId, id, message);
+  messageIndex.set(message.id, { documentId, threadId: id });
   res.json({ success: true, message });
 });
 
@@ -143,6 +151,36 @@ app.delete('/api/thread/:id', (req, res) => {
   }
   threadIndex.delete(id);
   res.json({ success: true });
+});
+
+// PUT /api/message/:id — edit a message's text (author check is client-side)
+app.put('/api/message/:id', (req, res) => {
+  const { id } = req.params;
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'text is required' });
+
+  const entry = messageIndex.get(id);
+  if (!entry) return res.status(404).json({ error: 'Message not found' });
+
+  if (!store.editMessage(entry.documentId, entry.threadId, id, text)) {
+    return res.status(404).json({ error: 'Message not found' });
+  }
+  res.json({ success: true });
+});
+
+// DELETE /api/message/:id — delete a single message (deletes thread if last message)
+app.delete('/api/message/:id', (req, res) => {
+  const { id } = req.params;
+
+  const entry = messageIndex.get(id);
+  if (!entry) return res.status(404).json({ error: 'Message not found' });
+
+  const result = store.deleteMessage(entry.documentId, entry.threadId, id);
+  if (!result) return res.status(404).json({ error: 'Message not found' });
+
+  messageIndex.delete(id);
+  if (result === 'thread-deleted') threadIndex.delete(entry.threadId);
+  res.json({ success: true, threadDeleted: result === 'thread-deleted' });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
