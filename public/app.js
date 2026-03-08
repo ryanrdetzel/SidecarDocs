@@ -12,17 +12,35 @@ function apiUrl(path) {
   return config.serverUrl + path;
 }
 
-// ─── Author / identity ────────────────────────────────────────────────────────
+// ─── Auth / identity ──────────────────────────────────────────────────────────
 
-const AUTHOR_KEY = 'sidecar_author';
 const THEME_KEY = 'sidecar_theme';
 
-function getAuthor() {
-  return localStorage.getItem(AUTHOR_KEY) || null;
+let currentUser = null;  // { name, email, picture }
+let authToken = null;    // short-lived JWT, in memory only
+
+function getAuthHeader() {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
 }
 
-function setAuthor(name) {
-  localStorage.setItem(AUTHOR_KEY, name.trim());
+async function initAuth() {
+  try {
+    const res = await fetch(apiUrl('/auth/me'), { credentials: 'include' });
+    if (!res.ok) { currentUser = null; authToken = null; return; }
+    const data = await res.json();
+    currentUser = data.user;
+    authToken = data.token;
+  } catch {
+    currentUser = null;
+    authToken = null;
+  }
+}
+
+async function logout() {
+  await fetch(apiUrl('/auth/logout'), { method: 'POST', credentials: 'include' });
+  currentUser = null;
+  authToken = null;
+  updateAuthorDisplay();
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -71,49 +89,20 @@ const modalSubmit = document.getElementById('modal-submit');
 const btnPreview = document.getElementById('btn-preview');
 const btnMarkdown = document.getElementById('btn-markdown');
 const authorDisplay = document.getElementById('author-display');
-const nameModal = document.getElementById('name-modal');
-const nameInput = document.getElementById('name-input');
-const nameSubmit = document.getElementById('name-submit');
 
 // ─── Author UI ────────────────────────────────────────────────────────────────
 
 function updateAuthorDisplay() {
-  const name = getAuthor();
-  if (name) {
-    authorDisplay.innerHTML = `Commenting as <strong>${escapeHtml(name)}</strong> · <button id="change-name-btn">change</button>`;
-    document.getElementById('change-name-btn').addEventListener('click', showNameModal);
+  if (currentUser) {
+    authorDisplay.innerHTML = `Commenting as <strong>${escapeHtml(currentUser.name)}</strong> · <button id="logout-btn">sign out</button>`;
+    document.getElementById('logout-btn').addEventListener('click', logout);
   } else {
-    authorDisplay.innerHTML = `<button id="set-name-btn">Set your name to comment</button>`;
-    document.getElementById('set-name-btn').addEventListener('click', showNameModal);
+    const isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+    const returnTo = isHttp ? encodeURIComponent(window.location.origin + window.location.pathname + window.location.search) : null;
+    const signInUrl = apiUrl('/auth/google') + (returnTo ? `?return_to=${returnTo}` : '');
+    authorDisplay.innerHTML = `<a href="${signInUrl}" id="signin-btn">Sign in with Google</a>`;
   }
 }
-
-function showNameModal(onComplete) {
-  nameInput.value = getAuthor() || '';
-  nameModal.classList.add('open');
-  nameInput.focus();
-  nameSubmit._onComplete = typeof onComplete === 'function' ? onComplete : null;
-}
-
-function closeNameModal() {
-  nameModal.classList.remove('open');
-}
-
-nameSubmit.addEventListener('click', () => {
-  const name = nameInput.value.trim();
-  if (!name) return;
-  setAuthor(name);
-  closeNameModal();
-  updateAuthorDisplay();
-  if (nameSubmit._onComplete) nameSubmit._onComplete();
-});
-
-nameInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') nameSubmit.click();
-  if (e.key === 'Escape') closeNameModal();
-});
-
-nameModal.addEventListener('click', e => { if (e.target === nameModal) closeNameModal(); });
 
 // ─── Element-level anchoring helpers ──────────────────────────────────────────
 
@@ -257,7 +246,7 @@ async function load() {
     state.markdown = markdownEl.textContent;
     state.html = docContent.innerHTML;
   } else {
-    const res = await fetch(apiUrl(`/api/document?documentId=${encodeURIComponent(config.documentId)}`));
+    const res = await fetch(apiUrl(`/api/document?documentId=${encodeURIComponent(config.documentId)}`), { credentials: 'include' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load document');
     state.markdown = data.markdown;
@@ -268,7 +257,7 @@ async function load() {
   renderSidebar();
 
   try {
-    const threadsRes = await fetch(apiUrl(`/api/threads?documentId=${encodeURIComponent(config.documentId)}`));
+    const threadsRes = await fetch(apiUrl(`/api/threads?documentId=${encodeURIComponent(config.documentId)}`), { credentials: 'include' });
     const threadsData = await threadsRes.json();
     if (!threadsRes.ok) throw new Error(threadsData.error || 'Failed to load threads');
     state.threads = threadsData.threads;
@@ -450,8 +439,7 @@ function buildMessageBubble(msg, threadId) {
   metaLeft.appendChild(date);
   meta.appendChild(metaLeft);
 
-  const currentAuthor = getAuthor();
-  if (currentAuthor && msg.author === currentAuthor && threadId) {
+  if (currentUser && msg.author_id === currentUser.sub && threadId) {
     const actions = document.createElement('span');
     actions.className = 'message-actions';
 
@@ -509,7 +497,8 @@ function showMessageEditForm(msg, _threadId, bubble, textEl) {
     try {
       const res = await fetch(apiUrl(`/api/message/${msg.id}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        credentials: 'include',
         body: JSON.stringify({ text: newText }),
       });
       if (!res.ok) throw new Error('Failed to save');
@@ -551,7 +540,11 @@ function showMessageDeleteConfirm(msg, _threadId, bubble, _deleteBtn) {
   yes.onclick = async () => {
     yes.disabled = true;
     try {
-      const res = await fetch(apiUrl(`/api/message/${msg.id}`), { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/message/${msg.id}`), {
+        method: 'DELETE',
+        headers: { ...getAuthHeader() },
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Failed to delete');
       const data = await res.json();
       if (data.threadDeleted) {
@@ -764,8 +757,9 @@ function buildInlineReplyForm(thread) {
     try {
       const res = await fetch(apiUrl(`/api/thread/${thread.id}/reply`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, author: getAuthor() }),
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        credentials: 'include',
+        body: JSON.stringify({ text }),
       });
       if (!res.ok) throw new Error('Failed to post reply');
       state.expandedThreadIds.add(thread.id);
@@ -932,7 +926,8 @@ function closeThread() {
 async function resolveThread(threadId, comment) {
   await fetch(apiUrl(`/api/thread/${threadId}/resolve`), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    credentials: 'include',
     body: JSON.stringify({ comment }),
   });
   state.activeThreadId = null;
@@ -942,7 +937,11 @@ async function resolveThread(threadId, comment) {
 }
 
 async function deleteThread(id) {
-  await fetch(apiUrl(`/api/thread/${id}`), { method: 'DELETE' });
+  await fetch(apiUrl(`/api/thread/${id}`), {
+    method: 'DELETE',
+    headers: { ...getAuthHeader() },
+    credentials: 'include',
+  });
   state.activeThreadId = null;
   state.sidebarMode = 'list';
   state.expandedThreadIds.delete(id);
@@ -952,7 +951,7 @@ async function deleteThread(id) {
 // ─── Selection handling ───────────────────────────────────────────────────────
 
 document.addEventListener('mouseup', (e) => {
-  if (e.target === addBtn || modal.contains(e.target) || nameModal.contains(e.target)) return;
+  if (e.target === addBtn || modal.contains(e.target)) return;
 
   // Comment creation is only supported in preview view.
   // Markdown view is read-only for annotations — switch to preview to comment.
@@ -1022,8 +1021,8 @@ addBtn.addEventListener('click', () => {
   if (!state.selection) return;
   addBtn.style.display = 'none';
 
-  if (!getAuthor()) {
-    showNameModal(() => openCommentModal());
+  if (!currentUser) {
+    window.location.href = apiUrl('/auth/google');
     return;
   }
 
@@ -1071,18 +1070,17 @@ async function submitComment() {
   const text = commentInput.value.trim();
   if (!text || !state.selection) return;
 
-  const author = getAuthor();
   const { elementType, elementIndex, elementText, selectedText } = state.selection;
 
   modalSubmit.disabled = true;
   try {
     const res = await fetch(apiUrl('/api/comment'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      credentials: 'include',
       body: JSON.stringify({
         documentId: config.documentId,
         text,
-        author,
         elementType,
         elementIndex,
         elementText,
@@ -1193,5 +1191,7 @@ document.addEventListener('mouseup', () => {
 
 initTheme();
 initSidebar();
-updateAuthorDisplay();
-load();
+initAuth().then(() => {
+  updateAuthorDisplay();
+  load();
+});

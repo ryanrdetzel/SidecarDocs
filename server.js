@@ -2,6 +2,8 @@ const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const { marked } = require('./lib/marked-config');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -13,12 +15,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
 
-if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS === '*') {
-  console.error('FATAL: ALLOWED_ORIGINS must be set in production. Refusing to start.');
-  process.exit(1);
-}
+// Google OAuth + JWT config
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
+const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
+const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
+
 if (ALLOWED_ORIGINS === '*') {
-  console.warn('WARNING: ALLOWED_ORIGINS is not set — CORS is open to all origins. Set ALLOWED_ORIGINS in production.');
+  console.log('CORS: open to all origins (ALLOWED_ORIGINS=*)');
+}
+if (!JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET is not set — Google OAuth will not work. Set JWT_SECRET to enable auth.');
 }
 
 // In-memory indexes (populated when threads are read)
@@ -37,8 +45,11 @@ function indexThreads(documentId, threads) {
 // ─── Middleware ────────────────────────────────────────────────────────────────
 
 const corsOptions = ALLOWED_ORIGINS === '*'
-  ? { origin: '*' }
-  : { origin: ALLOWED_ORIGINS.split(',').map(s => s.trim()) };
+  ? { origin: true, credentials: true }   // reflect requesting origin — required when credentials: 'include' is used
+  : {
+      origin: ALLOWED_ORIGINS.split(',').map(s => s.trim()),
+      credentials: true,
+    };
 
 const commentLimiter = rateLimit({
   windowMs: 60_000,
@@ -49,6 +60,7 @@ const commentLimiter = rateLimit({
 });
 
 app.use(cors(corsOptions));
+app.use(cookieParser());
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -59,7 +71,133 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// ─── Auth middleware ───────────────────────────────────────────────────────────
+
+function requireAuth(req, res, next) {
+  if (!JWT_SECRET) return res.status(503).json({ error: 'Auth not configured (JWT_SECRET missing)' });
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// ─── Auth routes ──────────────────────────────────────────────────────────────
+
+// Validate a return URL against the allowed origins list.
+// Returns the URL if valid, APP_URL fallback if not.
+function resolveReturnUrl(candidate) {
+  if (!candidate) return APP_URL;
+  try {
+    const { origin } = new URL(candidate);
+    if (ALLOWED_ORIGINS === '*') return candidate; // open — trust anything
+    const allowed = ALLOWED_ORIGINS.split(',').map(s => s.trim());
+    return allowed.includes(origin) ? candidate : APP_URL;
+  } catch {
+    return APP_URL;
+  }
+}
+
+// GET /auth/google — redirect to Google consent
+app.get('/auth/google', (req, res) => {
+  if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
+    return res.status(503).send('Google OAuth not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and JWT_SECRET.');
+  }
+  const returnTo = resolveReturnUrl(req.query.return_to);
+  const redirectUri = `${SERVER_URL}/auth/google/callback`;
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    state: returnTo,
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+// GET /auth/google/callback — exchange code, set session cookie, redirect to frontend
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, state } = req.query;
+  if (!code) return res.status(400).send('Missing authorization code');
+
+  const redirectUri = `${SERVER_URL}/auth/google/callback`;
+  try {
+    // Exchange code for Google tokens
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) {
+      console.error('OAuth token exchange failed:', tokenData);
+      return res.status(502).send('Failed to obtain access token from Google');
+    }
+
+    // Fetch user info
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const user = await userRes.json();
+    if (!user.sub) {
+      return res.status(502).send('Failed to fetch user info from Google');
+    }
+
+    // Sign long-lived session cookie
+    const sessionPayload = { sub: user.sub, email: user.email, name: user.name, picture: user.picture };
+    const sessionToken = jwt.sign(sessionPayload, JWT_SECRET, { expiresIn: '30d' });
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('sidecar_session', sessionToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'None' : 'Lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    const redirectTo = resolveReturnUrl(state);
+    res.redirect(redirectTo);
+  } catch (err) {
+    console.error('OAuth callback error:', err);
+    res.status(500).send('Authentication failed');
+  }
+});
+
+// GET /auth/me — verify session cookie, return user + short-lived JWT
+app.get('/auth/me', (req, res) => {
+  if (!JWT_SECRET) return res.status(503).json({ error: 'Auth not configured' });
+  const sessionToken = req.cookies.sidecar_session;
+  if (!sessionToken) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const session = jwt.verify(sessionToken, JWT_SECRET);
+    const token = jwt.sign(
+      { sub: session.sub, email: session.email, name: session.name },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    res.json({ user: { name: session.name, email: session.email, picture: session.picture }, token });
+  } catch {
+    res.clearCookie('sidecar_session');
+    res.status(401).json({ error: 'Session expired' });
+  }
+});
+
+// POST /auth/logout — clear session cookie
+app.post('/auth/logout', (req, res) => {
+  res.clearCookie('sidecar_session');
+  res.json({ success: true });
+});
+
+// ─── API routes ───────────────────────────────────────────────────────────────
 
 // GET /api/document?documentId=xxx  (dev mode convenience — serves sample.md)
 app.get('/api/document', (req, res) => {
@@ -96,8 +234,8 @@ app.get('/api/threads', (req, res) => {
 const VALID_ELEMENT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'li', 'blockquote', 'td', 'th']);
 
 // POST /api/comment — creates a new thread
-app.post('/api/comment', commentLimiter, (req, res) => {
-  const { documentId, text, author, elementType, elementIndex, elementText, selectedText } = req.body;
+app.post('/api/comment', commentLimiter, requireAuth, (req, res) => {
+  const { documentId, text, elementType, elementIndex, elementText, selectedText } = req.body;
 
   if (!documentId || !text || !elementType || elementIndex == null) {
     return res.status(400).json({ error: 'documentId, text, elementType, and elementIndex are required' });
@@ -108,12 +246,8 @@ app.post('/api/comment', commentLimiter, (req, res) => {
   if (!Number.isInteger(elementIndex) || elementIndex < 0) {
     return res.status(400).json({ error: 'elementIndex must be a non-negative integer' });
   }
-
   if (typeof text !== 'string' || text.length > 5000) {
     return res.status(400).json({ error: 'text must be a string under 5000 characters' });
-  }
-  if (author != null && (typeof author !== 'string' || author.length > 60)) {
-    return res.status(400).json({ error: 'author must be a string under 60 characters' });
   }
   if (elementText != null && (typeof elementText !== 'string' || elementText.length > 200)) {
     return res.status(400).json({ error: 'elementText must be a string under 200 characters' });
@@ -139,7 +273,7 @@ app.post('/api/comment', commentLimiter, (req, res) => {
     resolvedComment: null,
     createdAt: now,
     messages: [
-      { id: messageId, text, author: author || null, createdAt: now },
+      { id: messageId, text, author: req.user.name, author_id: req.user.sub, createdAt: now },
     ],
   };
 
@@ -150,16 +284,13 @@ app.post('/api/comment', commentLimiter, (req, res) => {
 });
 
 // POST /api/thread/:id/reply
-app.post('/api/thread/:id/reply', commentLimiter, (req, res) => {
+app.post('/api/thread/:id/reply', commentLimiter, requireAuth, (req, res) => {
   const { id } = req.params;
-  const { text, author } = req.body;
+  const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
 
   if (typeof text !== 'string' || text.length > 5000) {
     return res.status(400).json({ error: 'text must be a string under 5000 characters' });
-  }
-  if (author != null && (typeof author !== 'string' || author.length > 60)) {
-    return res.status(400).json({ error: 'author must be a string under 60 characters' });
   }
 
   const documentId = threadIndex.get(id);
@@ -167,7 +298,7 @@ app.post('/api/thread/:id/reply', commentLimiter, (req, res) => {
 
   const messageId = crypto.randomUUID();
   const now = new Date().toISOString();
-  const message = { id: messageId, text, author: author || null, createdAt: now };
+  const message = { id: messageId, text, author: req.user.name, author_id: req.user.sub, createdAt: now };
 
   if (!store.addReply(documentId, id, message)) {
     return res.status(404).json({ error: 'Thread not found' });
@@ -177,7 +308,7 @@ app.post('/api/thread/:id/reply', commentLimiter, (req, res) => {
 });
 
 // POST /api/thread/:id/resolve
-app.post('/api/thread/:id/resolve', (req, res) => {
+app.post('/api/thread/:id/resolve', requireAuth, (req, res) => {
   const { id } = req.params;
   const { comment } = req.body;
 
@@ -195,7 +326,7 @@ app.post('/api/thread/:id/resolve', (req, res) => {
 });
 
 // DELETE /api/thread/:id
-app.delete('/api/thread/:id', (req, res) => {
+app.delete('/api/thread/:id', requireAuth, (req, res) => {
   const { id } = req.params;
 
   const documentId = threadIndex.get(id);
@@ -208,8 +339,8 @@ app.delete('/api/thread/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// PUT /api/message/:id — edit a message's text (author check is client-side)
-app.put('/api/message/:id', (req, res) => {
+// PUT /api/message/:id — edit a message's text
+app.put('/api/message/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
@@ -220,6 +351,13 @@ app.put('/api/message/:id', (req, res) => {
   const entry = messageIndex.get(id);
   if (!entry) return res.status(404).json({ error: 'Message not found' });
 
+  const thread = store.getThread(entry.documentId, entry.threadId);
+  const msg = thread?.messages.find(m => m.id === id);
+  if (!msg) return res.status(404).json({ error: 'Message not found' });
+  if (msg.author_id && msg.author_id !== req.user.sub) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   if (!store.editMessage(entry.documentId, entry.threadId, id, text)) {
     return res.status(404).json({ error: 'Message not found' });
   }
@@ -227,11 +365,18 @@ app.put('/api/message/:id', (req, res) => {
 });
 
 // DELETE /api/message/:id — delete a single message (deletes thread if last message)
-app.delete('/api/message/:id', (req, res) => {
+app.delete('/api/message/:id', requireAuth, (req, res) => {
   const { id } = req.params;
 
   const entry = messageIndex.get(id);
   if (!entry) return res.status(404).json({ error: 'Message not found' });
+
+  const thread = store.getThread(entry.documentId, entry.threadId);
+  const msg = thread?.messages.find(m => m.id === id);
+  if (!msg) return res.status(404).json({ error: 'Message not found' });
+  if (msg.author_id && msg.author_id !== req.user.sub) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
 
   const result = store.deleteMessage(entry.documentId, entry.threadId, id);
   if (!result) return res.status(404).json({ error: 'Message not found' });
@@ -245,6 +390,7 @@ app.delete('/api/message/:id', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`CORS: ${ALLOWED_ORIGINS}`);
+  console.log(`CORS: ${ALLOWED_ORIGINS === '*' ? 'open (all origins)' : ALLOWED_ORIGINS}`);
+  console.log(`Auth: ${GOOGLE_CLIENT_ID ? 'Google OAuth enabled' : 'No auth (GOOGLE_CLIENT_ID not set)'}`);
   console.log(`Data: ${path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'))}`);
 });
