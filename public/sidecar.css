@@ -316,6 +316,16 @@ header span {
   text-decoration: underline;
 }
 
+#author-display a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+}
+
+#author-display a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
 /* Markdown source view */
 .md-source {
   font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
