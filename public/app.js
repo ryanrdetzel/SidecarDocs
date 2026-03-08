@@ -1010,6 +1010,8 @@ document.addEventListener('mouseup', (e) => {
     crossBlock,
   };
 
+  if (!currentUser) return;
+
   const rect = range.getBoundingClientRect();
   addBtn.style.display = 'block';
   addBtn.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
@@ -1020,12 +1022,6 @@ document.addEventListener('mouseup', (e) => {
 addBtn.addEventListener('click', () => {
   if (!state.selection) return;
   addBtn.style.display = 'none';
-
-  if (!currentUser) {
-    window.location.href = apiUrl('/auth/google');
-    return;
-  }
-
   openCommentModal();
 });
 
