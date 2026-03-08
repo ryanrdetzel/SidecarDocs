@@ -186,14 +186,24 @@ app.get('/auth/me', (req, res) => {
     );
     res.json({ user: { name: session.name, email: session.email, picture: session.picture }, token });
   } catch {
-    res.clearCookie('sidecar_session');
+    const isHttps = SERVER_URL.startsWith('https://');
+    res.clearCookie('sidecar_session', {
+      httpOnly: true,
+      secure: isHttps,
+      sameSite: isHttps ? 'None' : 'Lax',
+    });
     res.status(401).json({ error: 'Session expired' });
   }
 });
 
 // POST /auth/logout — clear session cookie
 app.post('/auth/logout', (req, res) => {
-  res.clearCookie('sidecar_session');
+  const isHttps = SERVER_URL.startsWith('https://');
+  res.clearCookie('sidecar_session', {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: isHttps ? 'None' : 'Lax',
+  });
   res.json({ success: true });
 });
 

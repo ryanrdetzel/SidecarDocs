@@ -613,7 +613,7 @@ function buildThreadCard(thread) {
       card.appendChild(buildMessageBubble(msg, thread.id));
     }
 
-    if (!thread.resolved) {
+    if (!thread.resolved && currentUser) {
       card.appendChild(buildInlineReplyForm(thread));
     }
 
@@ -675,7 +675,7 @@ function buildThreadCard(thread) {
     expandBtn.className = 'expand-thread-btn';
     if (count > 1) {
       expandBtn.textContent = `${count - 1} repl${count - 1 === 1 ? 'y' : 'ies'} ▾`;
-    } else if (thread.resolved) {
+    } else if (thread.resolved || !currentUser) {
       expandBtn.textContent = 'View ▾';
     } else {
       expandBtn.textContent = 'Reply ▾';
