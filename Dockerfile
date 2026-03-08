@@ -6,12 +6,12 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 COPY server.js build.js ./
+COPY lib/ ./lib/
 COPY public/ ./public/
 COPY sample.md ./
 
-# Mount /app/data for persistent comments.db
-VOLUME /app/data
-ENV DB_PATH=/app/data/comments.db
+# Mount /app/docs for markdown files with sidecar comment files
+VOLUME /app/docs
 
 EXPOSE 3000
 

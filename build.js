@@ -12,8 +12,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { marked } = require('marked');
+const { parseFrontmatter, makeDocumentId, findMarkdownFiles } = require('./lib/document-id');
+const { readThreads } = require('./lib/sidecar-store');
 
 // ─── Args ─────────────────────────────────────────────────────────────────────
 
@@ -49,67 +50,6 @@ function parseArgs() {
   return result;
 }
 
-// ─── Frontmatter ──────────────────────────────────────────────────────────────
-
-function parseFrontmatter(raw) {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
-  if (!match) return { data: {}, content: raw };
-
-  const data = {};
-  for (const line of match[1].split('\n')) {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
-    const key = line.slice(0, colonIdx).trim();
-    const val = line.slice(colonIdx + 1).trim();
-    if (key) data[key] = val;
-  }
-
-  return { data, content: raw.slice(match[0].length) };
-}
-
-// ─── File discovery ───────────────────────────────────────────────────────────
-
-function findMarkdownFiles(dir, base = dir) {
-  const results = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...findMarkdownFiles(full, base));
-    } else if (entry.name.endsWith('.md')) {
-      results.push(full);
-    }
-  }
-  return results;
-}
-
-// ─── Document ID ──────────────────────────────────────────────────────────────
-// A stable, opaque ID scoped to this deployment. Computed as:
-//   sha256(siteId + ':' + docPath).slice(0, 32)
-//
-// `docPath` is the relative path without extension (e.g. "specs/auth"),
-// or the frontmatter `id:` field if set.
-//
-// The siteId acts as a namespace — two different deployments with the same
-// file paths produce completely different document IDs, preventing collisions
-// and making IDs non-guessable without knowing the siteId.
-
-function makeDocumentId(filePath, inputDir, siteId, frontmatterId) {
-  if (frontmatterId && /^[0-9a-f]{32}$/.test(frontmatterId)) {
-    return frontmatterId;
-  }
-
-  const relPath = path.relative(path.resolve(inputDir), filePath).replace(/\\/g, '/').replace(/\.md$/, '');
-  const docPath = frontmatterId
-    ? path.dirname(relPath).replace(/\\/g, '/') + '/' + frontmatterId
-    : relPath;
-
-  return crypto
-    .createHash('sha256')
-    .update(siteId + ':' + docPath)
-    .digest('hex')
-    .slice(0, 32);
-}
-
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 // Extracted from public/index.html — kept here so the build output is
 // self-contained without needing to read the dev server's HTML at build time.
@@ -125,9 +65,8 @@ function getStyles() {
 
 // ─── HTML template ────────────────────────────────────────────────────────────
 
-function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, styles }) {
-  // Escape markdown/html for embedding in a JS string
-  const configJson = JSON.stringify({ serverUrl, documentId, markdown, html });
+function generateHtml({ title, documentId, serverUrl, markdown, html, threads, appJs, styles }) {
+  const configJson = JSON.stringify({ serverUrl, documentId, markdown, html, threads });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -243,8 +182,11 @@ function buildFile(filePath, opts) {
   const rel = path.relative(path.resolve(inputDir), filePath);
   const outPath = path.join(outputDir, rel.replace(/\.md$/, '.html'));
 
+  // Read existing threads from sidecar file to embed in the HTML
+  const threads = readThreads(filePath);
+
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, markdown: content, html, appJs, styles }));
+  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, markdown: content, html, threads, appJs, styles }));
 
   return { filePath, outPath, documentId };
 }

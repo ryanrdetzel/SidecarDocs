@@ -261,6 +261,11 @@ async function load() {
     state.html = data.html;
   }
 
+  // Use pre-embedded threads if available (from build step sidecar files)
+  if (window.SIDECAR_CONFIG && window.SIDECAR_CONFIG.threads && window.SIDECAR_CONFIG.threads.length) {
+    state.threads = window.SIDECAR_CONFIG.threads;
+  }
+
   renderView();
   renderSidebar();
 
