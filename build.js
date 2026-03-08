@@ -2,13 +2,16 @@
 // build.js — Static site generator for markdown-comment-sidecar
 //
 // Usage:
-//   node build.js --input ./docs --output ./dist --server https://comments.example.com
+//   node build.js --input ./docs --output ./dist --server https://comments.example.com \
+//     --site-id <secret> --assets-url https://cdn.example.com/sidecar
 //
 // Options:
-//   --input   DIR    Directory of .md files to process (default: ./docs)
-//   --output  DIR    Output directory for generated HTML (default: ./dist)
-//   --server  URL    Comment server base URL (required)
-//   --watch          Re-build when input files change
+//   --input      DIR    Directory of .md files to process (default: ./docs)
+//   --output     DIR    Output directory for generated HTML (default: ./dist)
+//   --server     URL    Comment server base URL (required)
+//   --site-id    TOKEN  Stable salt for document IDs (required)
+//   --assets-url URL    Base URL for sidecar.css and app.js (required)
+//   --watch             Re-build when input files change
 
 const fs = require('fs');
 const path = require('path');
@@ -19,19 +22,21 @@ const { parseFrontmatter, makeDocumentId, findMarkdownFiles } = require('./lib/d
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const result = { input: './docs', output: './dist', server: null, siteId: null, watch: false };
+  const result = { input: './docs', output: './dist', server: null, siteId: null, assetsUrl: null, watch: false };
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--input')   result.input   = args[++i];
-    if (args[i] === '--output')  result.output  = args[++i];
-    if (args[i] === '--server')  result.server  = args[++i];
-    if (args[i] === '--site-id') result.siteId  = args[++i];
-    if (args[i] === '--watch')   result.watch   = true;
+    if (args[i] === '--input')      result.input     = args[++i];
+    if (args[i] === '--output')     result.output    = args[++i];
+    if (args[i] === '--server')     result.server    = args[++i];
+    if (args[i] === '--site-id')    result.siteId    = args[++i];
+    if (args[i] === '--assets-url') result.assetsUrl = args[++i];
+    if (args[i] === '--watch')      result.watch     = true;
   }
 
   const missing = [];
   if (!result.server) missing.push('--server <url>');
   if (!result.siteId) missing.push('--site-id <token>');
+  if (!result.assetsUrl) missing.push('--assets-url <url>');
 
   if (missing.length) {
     console.error('Error: missing required flags: ' + missing.join(', '));
@@ -39,7 +44,8 @@ function parseArgs() {
     console.error('Example:');
     console.error('  node build.js --input ./docs --output ./dist \\');
     console.error('    --server https://comments.example.com \\');
-    console.error('    --site-id $(cat .site-id)');
+    console.error('    --site-id $(cat .site-id) \\');
+    console.error('    --assets-url https://cdn.example.com/sidecar');
     console.error('');
     console.error('Generate a site ID once and commit it:');
     console.error('  node -e "console.log(require(\'crypto\').randomUUID())" > .site-id');
@@ -49,22 +55,9 @@ function parseArgs() {
   return result;
 }
 
-// ─── CSS ──────────────────────────────────────────────────────────────────────
-// Extracted from public/index.html — kept here so the build output is
-// self-contained without needing to read the dev server's HTML at build time.
-
-function getStyles() {
-  // Read styles directly from the dev index.html so they stay in sync
-  const indexPath = path.join(__dirname, 'public', 'index.html');
-  if (!fs.existsSync(indexPath)) return '';
-  const html = fs.readFileSync(indexPath, 'utf8');
-  const match = html.match(/<style>([\s\S]*?)<\/style>/);
-  return match ? match[1] : '';
-}
-
 // ─── HTML template ────────────────────────────────────────────────────────────
 
-function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, styles }) {
+function generateHtml({ title, documentId, serverUrl, assetsUrl, markdown, html }) {
   const configJson = JSON.stringify({ serverUrl, documentId, markdown, html });
 
   return `<!DOCTYPE html>
@@ -73,7 +66,7 @@ function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, sty
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
-  <style>${styles}</style>
+  <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
 </head>
 <body>
   <header>
@@ -147,7 +140,7 @@ function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, sty
   </div>
 
   <script>window.SIDECAR_CONFIG = ${configJson};</script>
-  <script>${appJs}</script>
+  <script src="${assetsUrl}/app.js"></script>
 </body>
 </html>`;
 }
@@ -163,7 +156,7 @@ function escapeHtml(str) {
 // ─── Build ────────────────────────────────────────────────────────────────────
 
 function buildFile(filePath, opts) {
-  const { inputDir, outputDir, serverUrl, siteId, appJs, styles } = opts;
+  const { inputDir, outputDir, serverUrl, siteId, assetsUrl } = opts;
   const raw = fs.readFileSync(filePath, 'utf8');
   const { data, content } = parseFrontmatter(raw);
 
@@ -182,13 +175,13 @@ function buildFile(filePath, opts) {
   const outPath = path.join(outputDir, rel.replace(/\.md$/, '.html'));
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, markdown: content, html, appJs, styles }));
+  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, assetsUrl, markdown: content, html }));
 
   return { filePath, outPath, documentId };
 }
 
 function build(args) {
-  const { input, output, server, siteId } = args;
+  const { input, output, server, siteId, assetsUrl } = args;
   const inputDir = path.resolve(input);
   const outputDir = path.resolve(output);
 
@@ -196,15 +189,6 @@ function build(args) {
     console.error(`Input directory not found: ${inputDir}`);
     process.exit(1);
   }
-
-  const appJsPath = path.join(__dirname, 'public', 'app.js');
-  if (!fs.existsSync(appJsPath)) {
-    console.error(`public/app.js not found — run from the project root`);
-    process.exit(1);
-  }
-
-  const appJs = fs.readFileSync(appJsPath, 'utf8');
-  const styles = getStyles();
 
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -216,7 +200,7 @@ function build(args) {
 
   console.log(`Building ${files.length} file(s)...`);
 
-  const opts = { inputDir, outputDir, serverUrl: server, siteId, appJs, styles };
+  const opts = { inputDir, outputDir, serverUrl: server, siteId, assetsUrl };
   for (const f of files) {
     const result = buildFile(f, opts);
     const relOut = path.relative(process.cwd(), result.outPath);
@@ -239,15 +223,12 @@ function watch(args) {
     const filePath = path.join(inputDir, filename);
     if (!fs.existsSync(filePath)) return;
 
-    const appJs = fs.readFileSync(path.join(__dirname, 'public', 'app.js'), 'utf8');
-    const styles = getStyles();
     const opts = {
       inputDir,
       outputDir: path.resolve(args.output),
       serverUrl: args.server,
       siteId: args.siteId,
-      appJs,
-      styles,
+      assetsUrl: args.assetsUrl,
     };
 
     try {
