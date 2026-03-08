@@ -14,7 +14,6 @@ const fs = require('fs');
 const path = require('path');
 const { marked } = require('marked');
 const { parseFrontmatter, makeDocumentId, findMarkdownFiles } = require('./lib/document-id');
-const { readThreads } = require('./lib/sidecar-store');
 
 // ─── Args ─────────────────────────────────────────────────────────────────────
 
@@ -65,8 +64,8 @@ function getStyles() {
 
 // ─── HTML template ────────────────────────────────────────────────────────────
 
-function generateHtml({ title, documentId, serverUrl, markdown, html, threads, appJs, styles }) {
-  const configJson = JSON.stringify({ serverUrl, documentId, markdown, html, threads });
+function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, styles }) {
+  const configJson = JSON.stringify({ serverUrl, documentId, markdown, html });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -182,11 +181,8 @@ function buildFile(filePath, opts) {
   const rel = path.relative(path.resolve(inputDir), filePath);
   const outPath = path.join(outputDir, rel.replace(/\.md$/, '.html'));
 
-  // Read existing threads from sidecar file to embed in the HTML
-  const threads = readThreads(filePath);
-
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, markdown: content, html, threads, appJs, styles }));
+  fs.writeFileSync(outPath, generateHtml({ title, documentId, serverUrl, markdown: content, html, appJs, styles }));
 
   return { filePath, outPath, documentId };
 }
