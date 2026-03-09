@@ -183,6 +183,110 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+// ─── Index page ───────────────────────────────────────────────────────────────
+
+function generateIndexHtml({ title, entries, assetsUrl, hasParent }) {
+  const items = [];
+  if (hasParent) {
+    items.push(`          <li><a href="../index.html">&#x2190; Up</a></li>`);
+  }
+  for (const e of entries) {
+    if (e.type === "dir") {
+      items.push(
+        `          <li>&#x1F4C1; <a href="${escapeHtml(e.href)}">${escapeHtml(e.label)}</a></li>`,
+      );
+    } else {
+      items.push(
+        `          <li><a href="${escapeHtml(e.href)}">${escapeHtml(e.label)}</a></li>`,
+      );
+    }
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+  <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
+</head>
+<body>
+  <div class="layout">
+    <div class="doc-pane">
+      <div class="doc-content" id="doc-content">
+        <h1>${escapeHtml(title)}</h1>
+        <ul>
+${items.join("\n")}
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function generateIndexPages(outputDir, builtFiles, assetsUrl) {
+  // Map from dirPath → [{ name, title }]
+  const dirFiles = new Map();
+
+  for (const { outPath, title } of builtFiles) {
+    const dir = path.dirname(outPath);
+    const name = path.basename(outPath);
+    if (name === "index.html") continue;
+    if (!dirFiles.has(dir)) dirFiles.set(dir, []);
+    dirFiles.get(dir).push({ name, title });
+  }
+
+  // Collect all directories that contain built files, plus their ancestors
+  const allDirs = new Set();
+  for (const dir of dirFiles.keys()) {
+    let d = dir;
+    while (d.startsWith(outputDir)) {
+      allDirs.add(d);
+      if (d === outputDir) break;
+      d = path.dirname(d);
+    }
+  }
+
+  for (const dirPath of allDirs) {
+    const indexPath = path.join(dirPath, "index.html");
+    if (fs.existsSync(indexPath)) continue;
+
+    const files = dirFiles.get(dirPath) || [];
+
+    // Find direct subdirectories within this dir
+    const subdirs = [];
+    for (const d of allDirs) {
+      if (path.dirname(d) === dirPath && d !== dirPath) {
+        subdirs.push(path.basename(d));
+      }
+    }
+
+    const entries = [
+      ...subdirs.map((name) => ({
+        type: "dir",
+        href: name + "/index.html",
+        label: name,
+      })),
+      ...files.map(({ name, title }) => ({
+        type: "file",
+        href: name,
+        label: title,
+      })),
+    ];
+
+    const dirName =
+      dirPath === outputDir ? "Index" : path.basename(dirPath);
+    const hasParent = dirPath !== outputDir;
+
+    const indexHtml = generateIndexHtml({ title: dirName, entries, assetsUrl, hasParent });
+    fs.writeFileSync(indexPath, indexHtml);
+
+    const relOut = path.relative(process.cwd(), indexPath);
+    console.log(`  [index] → ${relOut}`);
+  }
+}
+
 // ─── Build ────────────────────────────────────────────────────────────────────
 
 function buildFile(filePath, opts) {
@@ -225,7 +329,7 @@ function buildFile(filePath, opts) {
     }),
   );
 
-  return { filePath, outPath, documentId };
+  return { filePath, outPath, documentId, title };
 }
 
 function build(args) {
@@ -249,14 +353,18 @@ function build(args) {
   console.log(`Building ${files.length} file(s)...`);
 
   const opts = { inputDir, outputDir, serverUrl: server, siteId, assetsUrl };
+  const built = [];
   for (const f of files) {
     const result = buildFile(f, opts);
     if (!result) continue;
+    built.push(result);
     const relOut = path.relative(process.cwd(), result.outPath);
     console.log(
       `  ${path.relative(process.cwd(), f)} → ${relOut}  [${result.documentId}]`,
     );
   }
+
+  generateIndexPages(outputDir, built, assetsUrl);
 
   console.log(`\nDone. Output: ${outputDir}`);
   console.log(
