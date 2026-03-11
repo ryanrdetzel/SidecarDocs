@@ -278,8 +278,28 @@ function renderView() {
 
 function renderPreviewView() {
   docContent.innerHTML = state.html;
+  injectHeadingAnchors();
   highlightThreads();
   addBtn.style.display = 'none';
+}
+
+function injectHeadingAnchors() {
+  docContent.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]').forEach(heading => {
+    const anchor = document.createElement('a');
+    anchor.className = 'heading-anchor';
+    anchor.href = '#' + heading.id;
+    anchor.title = 'Copy link to this section';
+    anchor.setAttribute('aria-label', 'Link to this section');
+    anchor.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z"/></svg>';
+    anchor.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = window.location.origin + window.location.pathname + window.location.search + '#' + heading.id;
+      history.pushState(null, '', '#' + heading.id);
+      navigator.clipboard?.writeText(url);
+      heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    heading.appendChild(anchor);
+  });
 }
 
 // Apply block-level highlights to the rendered preview.
@@ -1189,5 +1209,10 @@ initTheme();
 initSidebar();
 initAuth().then(() => {
   updateAuthorDisplay();
-  load();
+  load().then(() => {
+    if (window.location.hash) {
+      const target = document.getElementById(window.location.hash.slice(1));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
 });
