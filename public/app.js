@@ -1246,8 +1246,43 @@ document.addEventListener('mouseup', () => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
+function renderNoIdWarning() {
+  const existing = document.getElementById('no-id-warning');
+  if (config.hasExplicitId === false) {
+    if (!existing) {
+      const banner = document.createElement('div');
+      banner.id = 'no-id-warning';
+      banner.className = 'no-id-warning';
+
+      const heading = document.createElement('strong');
+      heading.textContent = '⚠ No stable document ID';
+      banner.appendChild(heading);
+
+      banner.appendChild(document.createTextNode(' This file does not have an '));
+
+      const code1 = document.createElement('code');
+      code1.textContent = 'id:';
+      banner.appendChild(code1);
+
+      banner.appendChild(document.createTextNode(' field in its frontmatter. If the file is renamed or moved, existing comments will be lost. Add '));
+
+      const code2 = document.createElement('code');
+      code2.textContent = 'id: <slug>';
+      banner.appendChild(code2);
+
+      banner.appendChild(document.createTextNode(' to the frontmatter to pin its ID.'));
+
+      const docPane = document.querySelector('.doc-pane');
+      if (docPane) docPane.insertBefore(banner, docContent);
+    }
+  } else {
+    if (existing) existing.remove();
+  }
+}
+
 initTheme();
 initSidebar();
+renderNoIdWarning();
 initAuth().then(() => {
   updateAuthorDisplay();
   load().then(() => {
