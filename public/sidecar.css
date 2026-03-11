@@ -501,6 +501,44 @@ header > span:not(.site-logo) {
   position: relative;
 }
 
+/* ── No-ID warning banner ─────────────────────────────────────────────────── */
+
+.no-id-warning {
+  max-width: 680px;
+  margin: 0 auto 20px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #78350f;
+}
+
+.no-id-warning strong {
+  display: inline;
+  font-weight: 600;
+}
+
+.no-id-warning code {
+  font-family: monospace;
+  font-size: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+[data-theme="dark"] .no-id-warning {
+  background: #2d2006;
+  border-color: #b45309;
+  color: #fde68a;
+}
+
+[data-theme="dark"] .no-id-warning code {
+  background: rgba(180, 83, 9, 0.3);
+}
+
 .doc-content {
   max-width: 680px;
   margin: 0 auto;

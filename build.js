@@ -126,8 +126,9 @@ function generateHtml({
   logo,
   searchIndexUrl,
   assets,
+  hasExplicitId,
 }) {
-  const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId }));
+  const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId, hasExplicitId }));
   const breadcrumbHtml = renderBreadcrumbs(breadcrumbs || []);
   // breadcrumbs includes "Index" as the first entry, so depth = length - 1
   const logoHref = "../".repeat(breadcrumbs ? Math.max(0, breadcrumbs.length - 1) : 0) + "index.html";
@@ -455,6 +456,7 @@ function buildFile(filePath, opts) {
     siteId,
     data.id || null,
   );
+  const hasExplicitId = !!(data.id);
   const html = marked.parse(content);
 
   // Title: frontmatter title, first H1 in markdown, or filename
@@ -489,6 +491,7 @@ function buildFile(filePath, opts) {
       logo,
       searchIndexUrl,
       assets,
+      hasExplicitId,
     }),
   );
 
