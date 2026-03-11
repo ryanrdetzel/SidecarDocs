@@ -9,6 +9,10 @@
 <body>
   <header>
     Markdown Comment Sidecar <span>POC</span>
+    <div class="search-wrapper">
+      <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
     <div class="header-controls">
       <span id="author-display"></span>
       <select id="theme-select" class="theme-select" title="Change theme">
@@ -51,6 +55,8 @@
 
 
 
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
 <script src="app.js"></script>
+<script src="search.js"></script>
 </body>
 </html>

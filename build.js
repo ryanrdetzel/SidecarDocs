@@ -50,6 +50,9 @@ function parseArgs() {
   if (!result.siteId) missing.push("--site-id <token>");
   if (!result.assetsUrl) missing.push("--assets-url <url>");
 
+  // Normalize assetsUrl: strip trailing slash so template interpolation is consistent
+  if (result.assetsUrl) result.assetsUrl = result.assetsUrl.replace(/\/$/, '');
+
   if (missing.length) {
     console.error("Error: missing required flags: " + missing.join(", "));
     console.error("");
@@ -76,6 +79,24 @@ function escapeScriptContent(str) {
   return str.replace(/<\/script/gi, '<\\/script');
 }
 
+// Strip markdown syntax to get plain searchable text
+function extractPlainText(markdown) {
+  return markdown
+    .replace(/^---[\s\S]*?^---\s*/m, '')        // frontmatter
+    .replace(/```[\s\S]*?```/g, '')               // code fences
+    .replace(/`[^`]+`/g, '')                      // inline code
+    .replace(/^#+\s+/gm, '')                      // heading markers
+    .replace(/\*\*([^*]+)\*\*/g, '$1')            // bold
+    .replace(/\*([^*]+)\*/g, '$1')                // italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')      // links
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')         // images
+    .replace(/^\s*[-*+]\s+/gm, '')                // list markers
+    .replace(/^\s*\d+\.\s+/gm, '')                // ordered list
+    .replace(/^\s*>/gm, '')                       // blockquotes
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function generateHtml({
   title,
   documentId,
@@ -98,6 +119,10 @@ function generateHtml({
 </head>
 <body>
   <header>
+    <div class="search-wrapper">
+      <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
     <div class="header-controls">
       <span id="author-display"></span>
       <span> &#x2022; </span>
@@ -159,7 +184,9 @@ ${html}
   <script type="text/plain" id="markdown-source">${escapeScriptContent(markdown)}</script>
 
   <script>window.SIDECAR_CONFIG = ${configJson};</script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
   <script src="${assetsUrl}/app.js"></script>
+  <script src="${assetsUrl}/search.js"></script>
 </body>
 </html>`;
 }
@@ -269,6 +296,12 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
   <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
 </head>
 <body>
+  <header class="index-header">
+    <div class="search-wrapper">
+      <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+  </header>
   <div class="index-page">
     <div class="index-container">
       ${breadcrumbHtml}
@@ -276,6 +309,8 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
       ${dirCards || fileCards ? `<div class="index-grid">${dirCards}${fileCards}</div>` : "<p>No pages found.</p>"}
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
+  <script src="${assetsUrl}/search.js"></script>
 </body>
 </html>`;
 }
@@ -394,7 +429,8 @@ function buildFile(filePath, opts) {
     }),
   );
 
-  return { filePath, outPath, documentId, title, description };
+  const plainText = extractPlainText(content).slice(0, 5000);
+  return { filePath, outPath, documentId, title, description, plainText };
 }
 
 function build(args) {
@@ -430,6 +466,19 @@ function build(args) {
   }
 
   generateIndexPages(outputDir, built, assetsUrl);
+
+  // Generate search index
+  const searchIndex = built.map(({ outPath, title, description, plainText }) => ({
+    title,
+    description: description || '',
+    content: plainText || '',
+    url: '/' + path.relative(outputDir, outPath).split(path.sep).join('/'),
+  }));
+  fs.writeFileSync(
+    path.join(outputDir, 'search-index.json'),
+    JSON.stringify(searchIndex),
+  );
+  console.log(`  [search] → search-index.json (${searchIndex.length} entries)`);
 
   console.log(`\nDone. Output: ${outputDir}`);
   console.log(
