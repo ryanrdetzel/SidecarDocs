@@ -1903,3 +1903,12 @@ li.cmt-block-highlight::after {
   color: var(--text-muted) !important;
   font-weight: 400 !important;
 }
+
+.doc-id {
+  margin-top: 3em;
+  font-size: 0.7em;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+  user-select: all;
+}

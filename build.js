@@ -180,6 +180,7 @@ function generateHtml({
       <div class="doc-content" id="doc-content">
         ${breadcrumbHtml}
 ${html}
+        <p class="doc-id">id: ${escapeHtml(documentId)}</p>
       </div>
     </div>
 
