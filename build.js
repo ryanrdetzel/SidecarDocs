@@ -91,6 +91,16 @@ function parseArgs() {
 
 // ─── HTML template ────────────────────────────────────────────────────────────
 
+function buildRecentButtonHtml() {
+  return `<div class="recent-wrapper">
+      <button id="btn-recent" class="recent-btn" title="Recent documents">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Recent</span>
+      </button>
+      <div id="recent-dropdown" class="recent-dropdown hidden"></div>
+    </div>`;
+}
+
 // Escape </script> sequences so embedded content can't break out of a script tag.
 function escapeScriptContent(str) {
   return str.replace(/<\/script/gi, '<\\/script');
@@ -136,6 +146,7 @@ function generateHtml({
   const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
   const themeFile = (assets && assets["theme.css"]) || "theme.css";
   const appJsFile = (assets && assets["app.js"]) || "app.js";
+  const recentJsFile = (assets && assets["recent.js"]) || "recent.js";
   const searchJsFile = (assets && assets["search.js"]) || "search.js";
 
   return `<!DOCTYPE html>
@@ -153,6 +164,7 @@ function generateHtml({
       <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    ${buildRecentButtonHtml()}
     <div class="header-controls">
       <a href="https://github.com/ryanrdetzel/markdown-comment-sidecar" target="_blank" rel="noopener" class="github-link" title="View source on GitHub">
         <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -199,6 +211,7 @@ ${html}
 
   <script>window.SIDECAR_CONFIG = ${configJson};window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
+  <script src="${assetsBase}/${recentJsFile}"></script>
   <script src="${assetsBase}/${appJsFile}"></script>
   <script src="${assetsBase}/${searchJsFile}"></script>
 </body>
@@ -287,6 +300,7 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
   const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
   const themeFile = (assets && assets["theme.css"]) || "theme.css";
   const searchJsFile = (assets && assets["search.js"]) || "search.js";
+  const recentJsFile = (assets && assets["recent.js"]) || "recent.js";
   const iconFolder = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
   const iconFile = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
 
@@ -327,6 +341,7 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
       <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    ${buildRecentButtonHtml()}
     <div class="header-controls">
       <a href="https://github.com/ryanrdetzel/markdown-comment-sidecar" target="_blank" rel="noopener" class="github-link" title="View source on GitHub"><svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
     </div>
@@ -340,6 +355,7 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
   </div>
   <script>window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
+  <script src="${assetsBase}/${recentJsFile}"></script>
   <script src="${assetsBase}/${searchJsFile}"></script>
 </body>
 </html>`;
@@ -494,7 +510,7 @@ function build(args) {
   console.log(`Building ${files.length} file(s)...`);
 
   // Copy static assets into output with content-hashed filenames for cache busting
-  const staticAssets = ['app.js', 'search.js', 'sidecar.css', 'theme.css'];
+  const staticAssets = ['app.js', 'recent.js', 'search.js', 'sidecar.css', 'theme.css'];
   const publicDir = path.join(__dirname, 'public');
   const assets = {};
   for (const asset of staticAssets) {

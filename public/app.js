@@ -849,6 +849,7 @@ function buildInlineReplyForm(thread) {
         body: JSON.stringify({ text }),
       });
       if (!res.ok) throw new Error('Failed to post reply');
+      trackRecentComment();
       state.expandedThreadIds.add(thread.id);
       state.activeThreadId = thread.id;
       await load();
@@ -1222,6 +1223,7 @@ async function submitNewComment(ta, submitBtn) {
     if (!res.ok) throw new Error('Failed to save comment');
     const data = await res.json();
     closeNewCommentForm();
+    trackRecentComment();
     await load();
     openThread(data.thread.id);
   } finally {
@@ -1401,9 +1403,11 @@ renderNoIdWarning();
 initAuth().then(() => {
   updateAuthorDisplay();
   load().then(() => {
+    setTimeout(trackRecentView, 10000);
     if (window.location.hash) {
       const target = document.getElementById(window.location.hash.slice(1));
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   });
 });
+

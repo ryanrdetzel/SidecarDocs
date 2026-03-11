@@ -49,6 +49,128 @@ header {
 }
 .github-link:hover { opacity: 1; }
 
+/* ── Recent Dropdown ─────────────────────────────────────────────────────── */
+
+.recent-wrapper {
+  position: relative;
+}
+
+.recent-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.recent-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.recent-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 280px;
+  background: var(--doc-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.recent-dropdown.hidden {
+  display: none;
+}
+
+.recent-section-header {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
+.recent-section-header:first-child {
+  border-top: none;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-item:hover {
+  background: var(--accent-light);
+}
+
+.recent-item.current {
+  background: var(--accent-light);
+}
+
+.recent-item-link {
+  flex: 1;
+  font-size: 13px;
+  color: var(--doc-color);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-item-link:hover {
+  color: var(--accent);
+}
+
+.recent-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.recent-star:hover {
+  color: #f59e0b;
+}
+
+.recent-comment-badge {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.recent-empty {
+  padding: 16px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* ── Logo ────────────────────────────────────────────────────────────────── */
 
 .site-logo {
@@ -1426,6 +1548,10 @@ li.cmt-block-highlight::after {
 }
 
 /* Message bubbles inside expanded card (no outer margin needed) */
+.comment-card .message-bubble-wrap {
+  margin: 0 0 8px;
+}
+
 .comment-card .message-bubble {
   margin: 0 0 6px;
   border-radius: 6px;
