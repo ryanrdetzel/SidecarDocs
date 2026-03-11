@@ -61,13 +61,35 @@ node build.js --input ./docs --output ./dist --server ... --site-id ... --assets
 
 ## Sync
 
-Pull comment data from the server into local sidecar files (useful for offline reading or backup):
+Pull comment data from the server into local sidecar files (useful for offline reading, backup, or version-controlling comments alongside their documents):
 
 ```bash
-node sync.js --server https://comments.example.com --site-id $(cat .site-id) --input ./docs
+node scripts/sync.js \
+  --server https://comments.example.com \
+  --site-id $(cat .site-id) \
+  --input ./docs
 ```
 
-This writes `<file>.md.comments.json` alongside each markdown file.
+For each `.md` file in `--input`, the script:
+1. Computes the document ID (respecting frontmatter overrides)
+2. Fetches threads from `GET /api/threads?documentId=...`
+3. Writes `<file>.md.comments.json` next to the markdown file if threads exist
+4. Removes the sidecar file if there are no threads (keeps things clean)
+
+Run this as part of a CI job or pre-build step to keep sidecar files up to date.
+
+## Add IDs
+
+`scripts/add-ids.js` scans a directory and adds a stable `id:` to the frontmatter of any markdown file that doesn't already have one. The slug matches the default document ID algorithm so existing comments are not orphaned.
+
+```bash
+node scripts/add-ids.js --input ./docs
+
+# Preview changes without writing
+node scripts/add-ids.js --input ./docs --dry-run
+```
+
+Run this once when adopting the sidecar system so every document has a pinned ID. After that, renaming a file won't orphan its comments as long as the `id:` field stays put. Files on a blocklist (README, CHANGELOG, LICENSE, etc.) are skipped automatically.
 
 ### Document IDs
 
@@ -109,7 +131,9 @@ Comment data is persisted in the `/app/data` volume.
 ```
 server.js          Express server + REST API
 build.js           Static site generator
-sync.js            Pull comments from server to local sidecar files
+scripts/
+  sync.js          Pull comments from server to local sidecar files
+  add-ids.js       Stamp stable id: into frontmatter of markdown files
 lib/
   document-id.js   Document ID generation and frontmatter parsing
   sidecar-store.js JSON-based comment storage
