@@ -1752,7 +1752,8 @@ li.cmt-block-highlight::after {
 /* ── Index pages ─────────────────────────────────────────────────────────── */
 
 .index-page {
-  min-height: 100vh;
+  flex: 1;
+  overflow-y: auto;
   background: var(--page-bg);
   padding: 48px 24px;
 }
@@ -1794,10 +1795,19 @@ li.cmt-block-highlight::after {
 }
 
 .index-card__icon {
-  font-size: 1.4rem;
   flex-shrink: 0;
   width: 32px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.index-card--dir .index-card__icon {
+  color: #d97706;
+}
+
+.index-card--file .index-card__icon {
+  color: #3b82f6;
 }
 
 .index-card__body {

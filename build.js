@@ -252,14 +252,14 @@ function slugToTitle(slug) {
 // Returns [] only for the root index itself.
 function buildBreadcrumbs(outputDir, currentPath) {
   const rel = path.relative(outputDir, currentPath);
-  if (!rel) return [];
+  if (!rel || rel === 'index.html') return [];
 
   const parts = rel.split(path.sep).filter(Boolean);
   // Pop the last segment (filename or dir name) — we only want ancestors
   parts.pop();
 
   const depth = parts.length;
-  const crumbs = [{ label: "Index", href: "../".repeat(depth) + "index.html" }];
+  const crumbs = [{ label: "Home", href: "../".repeat(depth) + "index.html" }];
   for (let i = 0; i < parts.length; i++) {
     const remaining = depth - 1 - i;
     crumbs.push({
@@ -284,22 +284,23 @@ function renderBreadcrumbs(crumbs, selfHref) {
 
 function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, searchIndexUrl }) {
   const assetsBase = basePath || "";
+  const iconFolder = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+  const iconFile = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
+
   const dirCards = entries.filter((e) => e.type === "dir").map((e) => `
         <a class="index-card index-card--dir" href="${escapeHtml(e.href)}">
-          <div class="index-card__icon">&#x1F4C2;</div>
+          <div class="index-card__icon">${iconFolder}</div>
           <div class="index-card__body">
             <div class="index-card__title">${escapeHtml(e.label)}</div>
-            ${e.description ? `<div class="index-card__desc">${escapeHtml(e.description)}</div>` : ""}
           </div>
           <div class="index-card__arrow">&#x2192;</div>
         </a>`).join("");
 
   const fileCards = entries.filter((e) => e.type === "file").map((e) => `
         <a class="index-card index-card--file" href="${escapeHtml(e.href)}">
-          <div class="index-card__icon">&#x1F4C4;</div>
+          <div class="index-card__icon">${iconFile}</div>
           <div class="index-card__body">
             <div class="index-card__title">${escapeHtml(e.label)}</div>
-            ${e.description ? `<div class="index-card__desc">${escapeHtml(e.description)}</div>` : ""}
           </div>
           <div class="index-card__arrow">&#x2192;</div>
         </a>`).join("");
@@ -405,7 +406,7 @@ function generateIndexPages(outputDir, builtFiles, basePath, logo) {
 
     const isRoot = dirPath === outputDir;
     const dirName = isRoot ? "Documentation" : slugToTitle(path.basename(dirPath));
-    const breadcrumbs = buildBreadcrumbs(outputDir, dirPath);
+    const breadcrumbs = buildBreadcrumbs(outputDir, path.join(dirPath, 'index.html'));
 
     const idepth = path.relative(outputDir, dirPath).split(path.sep).filter(Boolean).length;
     const searchIndexUrl = (idepth > 0 ? "../".repeat(idepth) : "") + "search-index.json";
