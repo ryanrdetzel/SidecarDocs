@@ -131,6 +131,9 @@ app.get('/', (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
+if (fs.existsSync(path.join(__dirname, 'dist'))) {
+  app.use('/dist', express.static(path.join(__dirname, 'dist')));
+}
 
 // ─── Auth middleware ───────────────────────────────────────────────────────────
 

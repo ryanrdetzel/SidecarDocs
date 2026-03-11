@@ -83,8 +83,10 @@ function generateHtml({
   assetsUrl,
   markdown,
   html,
+  breadcrumbs,
 }) {
   const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId }));
+  const breadcrumbHtml = renderBreadcrumbs(breadcrumbs || []);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -118,6 +120,7 @@ function generateHtml({
   <div class="layout">
     <div class="doc-pane">
       <div class="doc-content" id="doc-content">
+        ${breadcrumbHtml}
 ${html}
       </div>
     </div>
@@ -183,24 +186,92 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+// Extract first paragraph of plain text from markdown (skip headings, code, frontmatter)
+function extractDescription(content) {
+  const lines = content.split("\n");
+  let inCode = false;
+  let paragraph = [];
+
+  for (const line of lines) {
+    if (line.startsWith("```")) { inCode = !inCode; continue; }
+    if (inCode) continue;
+    if (/^#+\s/.test(line)) continue;    // headings
+    if (/^---/.test(line)) continue;     // frontmatter delimiter
+    if (/^\s*$/.test(line)) {
+      if (paragraph.length > 0) break;   // end of first paragraph
+      continue;
+    }
+    paragraph.push(line.trim());
+  }
+
+  const text = paragraph.join(" ").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
+  return text.length > 160 ? text.slice(0, 157) + "…" : text;
+}
+
+// Convert a directory name (slug) to a human-readable title
+function slugToTitle(slug) {
+  return slug
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Build breadcrumb segments from outputDir to the parent of currentPath.
+// For doc pages (isIndex=false): shows path up to (not including) the file.
+// For index pages (isIndex=true): shows path up to (not including) this dir.
+// Returns [{label, href}] using relative hrefs from the current page's location.
+// Build breadcrumb links from root down to the parent of currentPath.
+// All returned items are ancestor links (the current page is not included).
+// Returns [] only for the root index itself.
+function buildBreadcrumbs(outputDir, currentPath) {
+  const rel = path.relative(outputDir, currentPath);
+  if (!rel) return [];
+
+  const parts = rel.split(path.sep).filter(Boolean);
+  // Pop the last segment (filename or dir name) — we only want ancestors
+  parts.pop();
+
+  const depth = parts.length;
+  const crumbs = [{ label: "Index", href: "../".repeat(depth) + "index.html" }];
+  for (let i = 0; i < parts.length; i++) {
+    const remaining = depth - 1 - i;
+    crumbs.push({
+      label: slugToTitle(parts[i]),
+      href: remaining > 0 ? "../".repeat(remaining) + "index.html" : "index.html",
+    });
+  }
+  return crumbs;
+}
+
+function renderBreadcrumbs(crumbs) {
+  if (!crumbs.length) return "";
+  const items = crumbs.map((c) => `<a href="${escapeHtml(c.href)}">${escapeHtml(c.label)}</a>`);
+  return `<nav class="breadcrumbs">${items.join(" <span class=\"breadcrumb-sep\">/</span> ")}</nav>`;
+}
+
 // ─── Index page ───────────────────────────────────────────────────────────────
 
-function generateIndexHtml({ title, entries, assetsUrl, hasParent }) {
-  const items = [];
-  if (hasParent) {
-    items.push(`          <li><a href="../index.html">&#x2190; Up</a></li>`);
-  }
-  for (const e of entries) {
-    if (e.type === "dir") {
-      items.push(
-        `          <li>&#x1F4C1; <a href="${escapeHtml(e.href)}">${escapeHtml(e.label)}</a></li>`,
-      );
-    } else {
-      items.push(
-        `          <li><a href="${escapeHtml(e.href)}">${escapeHtml(e.label)}</a></li>`,
-      );
-    }
-  }
+function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
+  const dirCards = entries.filter((e) => e.type === "dir").map((e) => `
+        <a class="index-card index-card--dir" href="${escapeHtml(e.href)}">
+          <div class="index-card__icon">&#x1F4C2;</div>
+          <div class="index-card__body">
+            <div class="index-card__title">${escapeHtml(e.label)}</div>
+            ${e.description ? `<div class="index-card__desc">${escapeHtml(e.description)}</div>` : ""}
+          </div>
+          <div class="index-card__arrow">&#x2192;</div>
+        </a>`).join("");
+
+  const fileCards = entries.filter((e) => e.type === "file").map((e) => `
+        <a class="index-card index-card--file" href="${escapeHtml(e.href)}">
+          <div class="index-card__icon">&#x1F4C4;</div>
+          <div class="index-card__body">
+            <div class="index-card__title">${escapeHtml(e.label)}</div>
+            ${e.description ? `<div class="index-card__desc">${escapeHtml(e.description)}</div>` : ""}
+          </div>
+          <div class="index-card__arrow">&#x2192;</div>
+        </a>`).join("");
+
+  const breadcrumbHtml = renderBreadcrumbs(breadcrumbs);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -211,14 +282,11 @@ function generateIndexHtml({ title, entries, assetsUrl, hasParent }) {
   <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
 </head>
 <body>
-  <div class="layout">
-    <div class="doc-pane">
-      <div class="doc-content" id="doc-content">
-        <h1>${escapeHtml(title)}</h1>
-        <ul>
-${items.join("\n")}
-        </ul>
-      </div>
+  <div class="index-page">
+    <div class="index-container">
+      ${breadcrumbHtml}
+      <h1 class="index-title">${escapeHtml(title)}</h1>
+      ${dirCards || fileCards ? `<div class="index-grid">${dirCards}${fileCards}</div>` : "<p>No pages found.</p>"}
     </div>
   </div>
 </body>
@@ -226,15 +294,15 @@ ${items.join("\n")}
 }
 
 function generateIndexPages(outputDir, builtFiles, assetsUrl) {
-  // Map from dirPath → [{ name, title }]
+  // Map from dirPath → [{ name, title, description }]
   const dirFiles = new Map();
 
-  for (const { outPath, title } of builtFiles) {
+  for (const { outPath, title, description } of builtFiles) {
     const dir = path.dirname(outPath);
     const name = path.basename(outPath);
     if (name === "index.html") continue;
     if (!dirFiles.has(dir)) dirFiles.set(dir, []);
-    dirFiles.get(dir).push({ name, title });
+    dirFiles.get(dir).push({ name, title, description });
   }
 
   // Collect all directories that contain built files, plus their ancestors
@@ -254,32 +322,37 @@ function generateIndexPages(outputDir, builtFiles, assetsUrl) {
 
     const files = dirFiles.get(dirPath) || [];
 
-    // Find direct subdirectories within this dir
+    // Find direct subdirectories within this dir, with a description from their first child
     const subdirs = [];
     for (const d of allDirs) {
       if (path.dirname(d) === dirPath && d !== dirPath) {
-        subdirs.push(path.basename(d));
+        const subdirName = path.basename(d);
+        const subdirFiles = dirFiles.get(d) || [];
+        const firstDesc = subdirFiles[0]?.description || "";
+        subdirs.push({ name: subdirName, description: firstDesc });
       }
     }
 
     const entries = [
-      ...subdirs.map((name) => ({
+      ...subdirs.map(({ name, description }) => ({
         type: "dir",
         href: name + "/index.html",
-        label: name,
+        label: slugToTitle(name),
+        description,
       })),
-      ...files.map(({ name, title }) => ({
+      ...files.map(({ name, title, description }) => ({
         type: "file",
         href: name,
         label: title,
+        description,
       })),
     ];
 
-    const dirName =
-      dirPath === outputDir ? "Index" : path.basename(dirPath);
-    const hasParent = dirPath !== outputDir;
+    const isRoot = dirPath === outputDir;
+    const dirName = isRoot ? "Documentation" : slugToTitle(path.basename(dirPath));
+    const breadcrumbs = buildBreadcrumbs(outputDir, dirPath);
 
-    const indexHtml = generateIndexHtml({ title: dirName, entries, assetsUrl, hasParent });
+    const indexHtml = generateIndexHtml({ title: dirName, entries, assetsUrl, breadcrumbs });
     fs.writeFileSync(indexPath, indexHtml);
 
     const relOut = path.relative(process.cwd(), indexPath);
@@ -312,9 +385,13 @@ function buildFile(filePath, opts) {
     title = h1 ? h1[1] : path.basename(filePath, ".md");
   }
 
+  const description = data.description || extractDescription(content);
+
   // Output path mirrors input directory structure, .md → .html
   const rel = path.relative(path.resolve(inputDir), filePath);
   const outPath = path.join(outputDir, rel.replace(/\.md$/, ".html"));
+
+  const breadcrumbs = buildBreadcrumbs(outputDir, outPath);
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(
@@ -326,10 +403,11 @@ function buildFile(filePath, opts) {
       assetsUrl,
       markdown: content,
       html,
+      breadcrumbs,
     }),
   );
 
-  return { filePath, outPath, documentId, title };
+  return { filePath, outPath, documentId, title, description };
 }
 
 function build(args) {
