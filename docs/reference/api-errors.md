@@ -1,5 +1,6 @@
 ---
 title: API Errors
+id: api-errors
 ---
 
 # API Error Reference

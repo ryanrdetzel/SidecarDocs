@@ -1,5 +1,6 @@
 ---
 title: Custom Anchoring Strategies
+id: custom-anchoring
 ---
 
 # Custom Anchoring Strategies

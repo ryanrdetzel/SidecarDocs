@@ -1,5 +1,6 @@
 ---
 title: How It Works
+id: how-it-works
 ---
 
 # How It Works

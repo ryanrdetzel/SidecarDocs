@@ -1,5 +1,6 @@
 ---
 title: API Reference
+id: api
 ---
 
 # API Reference

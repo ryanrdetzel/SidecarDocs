@@ -1,5 +1,6 @@
 ---
 title: Anchor Element Types
+id: element-types
 ---
 
 # Anchor Element Types

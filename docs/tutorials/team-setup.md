@@ -1,5 +1,6 @@
 ---
 title: Team Setup
+id: team-setup
 ---
 
 # Team Setup

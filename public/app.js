@@ -1093,6 +1093,7 @@ function openNewCommentForm() {
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitNewComment(ta, submitBtn);
     if (e.key === 'Escape') closeNewCommentForm();
+    if (e.key === 'Tab') { e.preventDefault(); submitBtn.focus(); }
   });
 
   actions.appendChild(cancelBtn);

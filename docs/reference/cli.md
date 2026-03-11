@@ -1,5 +1,6 @@
 ---
 title: CLI Reference
+id: cli
 ---
 
 # CLI Reference

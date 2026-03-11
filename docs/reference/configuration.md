@@ -1,5 +1,6 @@
 ---
 title: Configuration
+id: configuration
 ---
 
 # Configuration

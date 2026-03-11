@@ -1,5 +1,6 @@
 ---
 title: Obsidian Integration
+id: obsidian
 ---
 
 # Obsidian Integration

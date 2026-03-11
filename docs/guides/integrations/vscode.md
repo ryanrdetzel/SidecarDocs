@@ -1,5 +1,6 @@
 ---
 title: VS Code Integration
+id: vscode
 ---
 
 # VS Code Integration

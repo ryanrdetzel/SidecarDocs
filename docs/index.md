@@ -1,5 +1,6 @@
 ---
 title: markdown-comment-sidecar
+id: index
 ---
 
 # markdown-comment-sidecar

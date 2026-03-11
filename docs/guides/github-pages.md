@@ -1,5 +1,6 @@
 ---
 title: GitHub Pages
+id: github-pages
 ---
 
 # Deploying to GitHub Pages
