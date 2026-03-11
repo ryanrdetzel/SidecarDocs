@@ -216,14 +216,27 @@ function escapeHtml(str) {
 }
 
 function authorColor(name) {
-  if (!name) return 'var(--accent)';
+  const AUTHOR_COLORS = [
+    '#1e5fa8', // editorial deep blue
+    '#2e7d5e', // muted teal-green
+    '#7a3e9d', // muted plum
+    '#b84c2a', // terracotta
+    '#2a6e8a', // slate blue-teal
+    '#8a5c2a', // warm caramel
+    '#4a6e2a', // olive green
+    '#7a2e4a', // dusty rose-wine
+    '#3a5a8a', // steel blue
+    '#6a3e2a', // warm umber
+    '#2a7a6a', // sage teal
+    '#8a3e6e', // mauve
+  ];
+  if (!name) return AUTHOR_COLORS[0];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = (hash << 5) - hash + name.charCodeAt(i);
     hash |= 0;
   }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 65%, 42%)`;
+  return AUTHOR_COLORS[Math.abs(hash) % AUTHOR_COLORS.length];
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
