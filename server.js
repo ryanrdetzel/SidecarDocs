@@ -69,6 +69,67 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
+
+// Landing page at root
+app.get('/', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Comment Sidecar</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8f8f6;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      text-align: center;
+      max-width: 480px;
+      padding: 2.5rem 2rem;
+    }
+    h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
+    h1 span { color: #888; font-weight: 400; font-size: 0.9rem; vertical-align: middle; margin-left: 0.4rem; }
+    p {
+      margin-top: 1rem;
+      color: #555;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+    a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    .repo {
+      display: inline-block;
+      margin-top: 1.75rem;
+      font-size: 0.875rem;
+      color: #888;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      background: #fff;
+    }
+    .repo:hover { border-color: #aaa; color: #333; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Markdown Comment Sidecar <span>POC</span></h1>
+    <p>Annotate markdown files with threaded comments — without touching the source file. Comments are anchored to document elements and stored in a sidecar database.</p>
+    <a class="repo" href="https://github.com/ryanrdetzel/markdown-comment-sidecar" target="_blank" rel="noopener">View on GitHub</a>
+  </div>
+</body>
+</html>`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Auth middleware ───────────────────────────────────────────────────────────
