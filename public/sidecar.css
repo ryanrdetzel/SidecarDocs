@@ -1534,90 +1534,11 @@ li.cmt-block-highlight::after {
   margin-top: 8px;
 }
 
-/* Name modal */
-#name-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-
-#name-modal.open {
-  display: flex;
-}
-
-.modal-box {
-  background: var(--card-bg);
-  border-radius: 10px;
-  padding: 24px;
-  width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.modal-box h3 {
-  font-size: 15px;
-  margin-bottom: 8px;
-  color: var(--heading-color);
-}
-
-.modal-box p {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 14px;
-}
-
-.modal-selected-text {
-  background: var(--modal-selected-bg);
-  border-left: 3px solid var(--modal-selected-border);
-  padding: 8px 10px;
-  font-size: 12px;
-  color: var(--modal-selected-color);
-  border-radius: 3px;
-  margin-bottom: 14px;
-  white-space: pre-wrap;
-  max-height: 80px;
-  overflow-y: auto;
-}
-
 .cross-block-note {
   font-size: 11px;
   color: var(--text-muted);
   margin-bottom: 10px;
   font-style: italic;
-}
-
-.modal-box input[type="text"],
-.modal-box textarea {
-  width: 100%;
-  border: 1px solid var(--input-border);
-  border-radius: 6px;
-  padding: 10px;
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  background: var(--doc-bg);
-  color: var(--doc-color);
-}
-
-.modal-box textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.modal-box input[type="text"]:focus,
-.modal-box textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-light);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
 }
 
 .btn-cancel {

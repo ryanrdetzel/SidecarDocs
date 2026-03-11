@@ -474,7 +474,7 @@ function buildMessageBubble(msg, threadId) {
     editBtn.textContent = 'edit';
     editBtn.onclick = (e) => {
       e.stopPropagation();
-      showMessageEditForm(msg, threadId, bubble, text);
+      showMessageEditForm(msg, bubble, text);
     };
 
     const deleteBtn = document.createElement('button');
@@ -482,7 +482,7 @@ function buildMessageBubble(msg, threadId) {
     deleteBtn.textContent = 'delete';
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
-      showMessageDeleteConfirm(msg, threadId, bubble, deleteBtn);
+      showMessageDeleteConfirm(msg, bubble);
     };
 
     actions.appendChild(editBtn);
@@ -550,7 +550,7 @@ function buildMessageBubble(msg, threadId) {
   return wrap;
 }
 
-function showMessageEditForm(msg, _threadId, bubble, textEl) {
+function showMessageEditForm(msg, bubble, textEl) {
   if (bubble.querySelector('.msg-edit-form')) return;
 
   const form = document.createElement('div');
@@ -606,7 +606,7 @@ function showMessageEditForm(msg, _threadId, bubble, textEl) {
   ta.select();
 }
 
-function showMessageDeleteConfirm(msg, _threadId, bubble, _deleteBtn) {
+function showMessageDeleteConfirm(msg, bubble) {
   if (bubble.querySelector('.msg-delete-confirm')) return;
 
   const confirm = document.createElement('div');

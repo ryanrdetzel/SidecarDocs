@@ -57,7 +57,6 @@ function parseArgs() {
     if (args[i] === "--output") result.output = args[++i];
     if (args[i] === "--server") result.server = args[++i];
     if (args[i] === "--site-id") result.siteId = args[++i];
-    if (args[i] === "--assets-url") { i++; /* ignored, assets are now bundled into output */ }
     if (args[i] === "--base-path") result.basePath = args[++i];
     if (args[i] === "--logo") result.logo = args[++i];
     if (args[i] === "--watch") result.watch = true;
@@ -194,18 +193,6 @@ ${html}
   </div>
 
   <button id="add-comment-btn">+ Add Comment</button>
-
-  <!-- Name prompt modal -->
-  <div id="name-modal">
-    <div class="modal-box">
-      <h3>What's your name?</h3>
-      <p>Your name will appear on comments you write. It's saved in your browser.</p>
-      <input type="text" id="name-input" placeholder="e.g. Ryan" maxlength="60" />
-      <div class="modal-actions">
-        <button class="btn-submit" id="name-submit">Save &amp; Continue</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Raw markdown source for the markdown view toggle -->
   <script type="text/plain" id="markdown-source">${escapeScriptContent(markdown)}</script>
