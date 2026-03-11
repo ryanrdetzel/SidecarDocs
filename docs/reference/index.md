@@ -7,9 +7,11 @@ id: index
 
 Detailed reference documentation for markdown-comment-sidecar.
 
-- [Configuration](configuration.html) — all server and build configuration options
-- [CLI](cli.html) — command-line interface for the build script
+- [Configuration](configuration.html) — server and build configuration options
+- [CLI](cli.html) — command-line scripts and npm commands
 - [Data Model](data-model.html) — database schema, field definitions, and SQLite tips
+- [Document IDs](document-ids.html) — how document IDs are derived, overridden, and kept stable
+- [Theming](theming.html) — CSS variable reference and custom theme guide
 - [API Errors](api-errors.html) — HTTP error codes and CORS troubleshooting
 
 ## Anchoring

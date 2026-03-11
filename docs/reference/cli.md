@@ -5,6 +5,20 @@ id: cli
 
 # CLI Reference
 
+## npm scripts
+
+The three npm scripts are the main entry points.
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `npm start` | `node server.js` | Start the comment server (default port 3000) |
+| `npm run build` | `node build.js` | Build static HTML from `./docs` into `./dist` |
+| `npm run sync` | `node sync.js` | Pull threads from the server into `.comments.json` sidecar files |
+
+Pass additional flags directly to the underlying scripts (see below).
+
+---
+
 ## build.js
 
 Generates a static HTML site from a directory of markdown files.
@@ -15,14 +29,15 @@ node build.js [options]
 
 ### Options
 
-```
---input  <dir>     Source directory of .md files (default: ./docs)
---output <dir>     Destination directory for HTML output (default: ./dist)
---server <url>     Comment server base URL (required)
---site-id <tok>    Stable secret salt for document IDs (required)
---assets-url <url> Base URL for sidecar.css and app.js (required)
---watch            Watch for file changes and rebuild automatically
-```
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| `--input <dir>` | no | `./docs` | Source directory of `.md` files |
+| `--output <dir>` | no | `./dist` | Destination directory for HTML output |
+| `--server <url>` | **yes** | — | Comment server base URL |
+| `--site-id <token>` | **yes** | — | Stable secret salt for document IDs |
+| `--base-path <path>` | no | `""` | URL path prefix if the site is not at the root (e.g. `/docs`) |
+| `--logo <text>` | no | — | Branding label shown top-left of every page, links to root index |
+| `--watch` | no | — | Re-build when input files change |
 
 ### Example
 
@@ -32,7 +47,7 @@ node build.js \
   --output ./dist \
   --server https://comments.example.com \
   --site-id $(cat .site-id) \
-  --assets-url https://cdn.example.com/sidecar
+  --logo "Acme Docs"
 ```
 
 ### Output structure
@@ -48,6 +63,10 @@ docs/guides/docker.md    → dist/guides/docker.html
 
 For any directory that doesn't already contain an `index.md`, the build generates an `index.html` listing all files and subdirectories in that directory.
 
+Static assets (`app.js`, `search.js`, `sidecar.css`, `theme.css`) are copied into the output directory with content-hashed filenames for cache busting.
+
+---
+
 ## server.js
 
 Starts the Express comment server.
@@ -57,6 +76,8 @@ node server.js
 ```
 
 The server reads `PORT`, `DB_PATH`, and `CORS_ORIGIN` from the environment (see [Configuration](configuration.html)).
+
+---
 
 ## sync.js
 
@@ -68,11 +89,11 @@ node sync.js [options]
 
 ### Options
 
-```
---input  <dir>  Source directory of .md files (default: ./docs)
---server <url>  Comment server base URL (required)
---site-id <tok> Stable secret salt for document IDs (required)
-```
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| `--input <dir>` | no | `./docs` | Source directory of `.md` files |
+| `--server <url>` | **yes** | — | Comment server base URL |
+| `--site-id <token>` | **yes** | — | Stable secret salt for document IDs |
 
 ### Example
 

@@ -1,0 +1,77 @@
+/*
+ * Sidecar — Classic Theme
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Copy and customize this file to create your own team theme.
+ * All values are CSS custom properties. Override any variable to change the
+ * look across the entire UI — no other files need to be edited.
+ *
+ * To use a custom theme:
+ *   1. Copy this file to e.g. `my-theme.css`
+ *   2. Edit the values below
+ *   3. Replace the <link> for theme.css in index.html with your file
+ */
+
+:root {
+  /* ── Header ────────────────────────────────────────────────────────────── */
+  --hdr-bg:    #1f2937;   /* page header background                          */
+  --hdr-color: #f9fafb;   /* page header text / icon color                   */
+
+  /* ── Page & document ───────────────────────────────────────────────────── */
+  --page-bg:       #f3f4f6;   /* outer page background                       */
+  --doc-bg:        #ffffff;   /* document pane background                    */
+  --doc-color:     #1f2937;   /* body text                                   */
+  --heading-color: #111827;   /* h1                                          */
+  --heading-color-2: #374151; /* h2–h6                                       */
+
+  /* ── Sidebar ───────────────────────────────────────────────────────────── */
+  --sidebar-bg:     #f9fafb;
+  --sidebar-border: #e5e7eb;
+
+  /* ── Accent (interactive: buttons, links, active states) ───────────────── */
+  --accent:       #2563eb;   /* blue-600                                      */
+  --accent-hover: #1d4ed8;   /* blue-700                                      */
+  --accent-light: #dbeafe;   /* blue-100 — focus rings, tab highlight bg      */
+  --accent-text:  #1d4ed8;   /* blue-700 — accent-coloured text               */
+
+  /* ── Borders & muted text ──────────────────────────────────────────────── */
+  --border:       #e5e7eb;   /* gray-200                                      */
+  --input-border: #d1d5db;   /* gray-300                                      */
+  --text-muted:   #6b7280;   /* gray-500                                      */
+  --text-dim:     #d1d5db;   /* gray-300                                      */
+
+  /* ── Cards ─────────────────────────────────────────────────────────────── */
+  --card-bg:     #ffffff;
+  --card-border: #e5e7eb;
+
+  /* ── Comment highlights (text marks, gutter bars, thread anchors) ──────── */
+  --mark-bg:          #fef3c7;   /* amber-100 — selected text background      */
+  --mark-border:      #d97706;   /* amber-600 — underline / gutter bar        */
+  --mark-hover-bg:    #fde68a;   /* amber-200 — hovered mark                  */
+  --mark-active-shadow: #d97706; /* amber-600 — focus ring on active mark     */
+
+  /* block-level element hover/active tint backgrounds */
+  --mark-block-hover-bg:  rgba(217, 119, 6, 0.08);
+  --mark-block-active-bg: rgba(217, 119, 6, 0.13);
+
+  /* ── Thread anchor quote strip ─────────────────────────────────────────── */
+  --thread-anchor-bg:     #fef3c7;
+  --thread-anchor-border: #d97706;
+  --thread-anchor-color:  #92400e;   /* amber-900                             */
+
+  /* ── New-comment / selection quote strip ───────────────────────────────── */
+  --modal-selected-bg:     #fef3c7;
+  --modal-selected-border: #d97706;
+  --modal-selected-color:  #92400e;
+
+  /* ── Misc ───────────────────────────────────────────────────────────────── */
+  --author-bar-bg:     #f0f9ff;   /* sky-50                                   */
+  --author-bar-border: #e5e7eb;
+  --resizer-hover:     #93c5fd;   /* blue-300                                 */
+
+  /* ── Secondary / resolve button palette ───────────────────────────────── */
+  --secondary:        #f1f5f9;   /* slate-100                                 */
+  --secondary-hover:  #e2e8f0;   /* slate-200                                 */
+  --secondary-border: #cbd5e1;   /* slate-300                                 */
+  --secondary-text:   #475569;   /* slate-600                                 */
+  --secondary-light:  #f8fafc;   /* slate-50                                  */
+}

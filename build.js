@@ -135,6 +135,7 @@ function generateHtml({
   const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(logoHref)}">${escapeHtml(logo)}</a></span>` : "";
   const assetsBase = basePath || "";
   const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
+  const themeFile = (assets && assets["theme.css"]) || "theme.css";
   const appJsFile = (assets && assets["app.js"]) || "app.js";
   const searchJsFile = (assets && assets["search.js"]) || "search.js";
 
@@ -144,8 +145,8 @@ function generateHtml({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
+  <link rel="stylesheet" href="${assetsBase}/${themeFile}">
   <link rel="stylesheet" href="${assetsBase}/${cssFile}">
-  <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
   <header>
@@ -297,6 +298,7 @@ function renderBreadcrumbs(crumbs, selfHref) {
 function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, searchIndexUrl, assets }) {
   const assetsBase = basePath || "";
   const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
+  const themeFile = (assets && assets["theme.css"]) || "theme.css";
   const searchJsFile = (assets && assets["search.js"]) || "search.js";
   const iconFolder = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
   const iconFile = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
@@ -329,8 +331,8 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
+  <link rel="stylesheet" href="${assetsBase}/${themeFile}">
   <link rel="stylesheet" href="${assetsBase}/${cssFile}">
-  <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
   <header class="index-header">
@@ -505,7 +507,7 @@ function build(args) {
   console.log(`Building ${files.length} file(s)...`);
 
   // Copy static assets into output with content-hashed filenames for cache busting
-  const staticAssets = ['app.js', 'search.js', 'sidecar.css'];
+  const staticAssets = ['app.js', 'search.js', 'sidecar.css', 'theme.css'];
   const publicDir = path.join(__dirname, 'public');
   const assets = {};
   for (const asset of staticAssets) {

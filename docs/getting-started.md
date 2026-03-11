@@ -39,8 +39,7 @@ node build.js \
   --input ./docs \
   --output ./dist \
   --server http://localhost:3000 \
-  --site-id my-local-site \
-  --assets-url http://localhost:3000
+  --site-id my-local-site
 ```
 
 Then open `./dist/index.html` in a browser (with the dev server still running).
@@ -71,13 +70,24 @@ The `.site-id` file is gitignored by default. Store it somewhere safe (a secrets
 ```
 server.js          — Express API and comment storage logic
 build.js           — Static site generator
+sync.js            — Pulls threads from server into .comments.json sidecar files
 public/
-  index.html       — Dev-mode shell (CSS + HTML)
+  index.html       — Dev-mode shell
   app.js           — All frontend logic (vanilla JS, no modules)
-  sidecar.css      — Stylesheet (served as static assets)
+  search.js        — Full-text search (Fuse.js)
+  sidecar.css      — Structural styles
+  theme.css        — Color theme (copy and edit to brand the UI)
 sample.md          — Document shown in dev mode (npm start)
 docs/              — Markdown source for this documentation site
 lib/
   document-id.js   — Document ID derivation and frontmatter parsing
 comments.db        — Created at runtime, gitignored
 ```
+
+## npm scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `npm start` | `node server.js` | Start the comment server (port 3000) |
+| `npm run build` | `node build.js` | Build static HTML from `./docs` to `./dist` |
+| `npm run sync` | `node sync.js` | Pull threads from server into `.comments.json` sidecar files |
