@@ -1,0 +1,123 @@
+{
+  "threads": [
+    {
+      "id": "388769e6-3e56-473f-b364-04f17377c3c2",
+      "anchor": {
+        "elementType": "p",
+        "elementIndex": 0,
+        "elementText": "The comment server exposes a small REST API. All endpoints accept and return JSO",
+        "selectedText": "The comment server exposes a small REST API. All endpoints accept and return JSON."
+      },
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "createdAt": "2026-03-11T22:14:40.215Z",
+      "messages": [
+        {
+          "id": "beca5bfc-f9af-42b9-9b8e-6ea77d16f515",
+          "text": "This is a comment from me...",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:14:40.215Z",
+          "editedAt": "2026-03-11T22:50:13.518Z",
+          "reactions": {
+            "👍": [
+              "102238226508021847763"
+            ],
+            "💯": [
+              "102238226508021847763"
+            ]
+          }
+        },
+        {
+          "id": "beca5bfc-f9af-42b9-9b8e-6ea77d16f513",
+          "text": "A reply from another user",
+          "author": "Not Ryan",
+          "author_id": "102238226508021847765",
+          "createdAt": "2026-03-11T22:14:40.215Z",
+          "reactions": {
+            "✅": [
+              "102238226508021847763"
+            ]
+          }
+        },
+        {
+          "id": "035773f1-a5b0-4482-b41e-262f06cff76e",
+          "text": "Lorem Ipsum is simply dummy text of the printing andfsd typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:59:41.872Z",
+          "reactions": {
+            "🎉": [
+              "102238226508021847763"
+            ]
+          },
+          "editedAt": "2026-03-11T23:00:05.656Z"
+        },
+        {
+          "id": "7e36afd4-9b2a-46f4-8667-a15f547d3fef",
+          "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T23:01:40.184Z"
+        },
+        {
+          "id": "963511a0-dcb4-40ad-aa7f-3a40473a0722",
+          "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T23:01:42.103Z"
+        }
+      ]
+    },
+    {
+      "id": "b02381b6-24af-4694-9de1-d67645eaabf7",
+      "anchor": {
+        "elementType": "p",
+        "elementIndex": 3,
+        "elementText": "Fetch a document's rendered HTML, raw markdown, and all comment threads in one r",
+        "selectedText": "markdown"
+      },
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "createdAt": "2026-03-11T22:16:15.363Z",
+      "messages": [
+        {
+          "id": "c31b168b-8895-42ce-b68f-2858491c50fc",
+          "text": "another comment",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:16:15.363Z"
+        }
+      ]
+    },
+    {
+      "id": "c523b051-3d85-48c0-89f0-57b048d70ecb",
+      "anchor": {
+        "elementType": "p",
+        "elementIndex": 1,
+        "elementText": "In development: http://localhost:3000",
+        "selectedText": "development"
+      },
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "createdAt": "2026-03-11T22:47:08.508Z",
+      "messages": [
+        {
+          "id": "a63c6a42-0b48-49a4-8550-ed7d472f83a4",
+          "text": "fff",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:47:08.508Z",
+          "reactions": {
+            "👍": [
+              "102238226508021847763"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "threads": [
+    {
+      "id": "2492b8a5-cef1-4216-af2f-1619ab93f9e0",
+      "anchor": {
+        "elementType": "h2",
+        "elementIndex": 0,
+        "elementText": "Element-based anchoring",
+        "selectedText": "Element-based anchoring"
+      },
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "createdAt": "2026-03-11T22:09:48.645Z",
+      "messages": [
+        {
+          "id": "40c4c4b1-ceac-41e6-8add-a791331c76dc",
+          "text": "This is amazing",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:09:48.645Z"
+        }
+      ]
+    },
+    {
+      "id": "139ee0cd-625f-4b8c-ab65-6b22fbc16a6f",
+      "anchor": {
+        "elementType": "p",
+        "elementIndex": 0,
+        "elementText": "Most annotation systems anchor to character offsets in the raw text. This works ",
+        "selectedText": "every"
+      },
+      "resolved": true,
+      "resolvedAt": "2026-03-11T22:11:37.306Z",
+      "resolvedComment": null,
+      "createdAt": "2026-03-11T22:11:34.221Z",
+      "messages": [
+        {
+          "id": "b5210376-ac00-4cd2-99e7-bde728743536",
+          "text": "sdfsdf",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:11:34.221Z"
+        }
+      ]
+    }
+  ]
+}

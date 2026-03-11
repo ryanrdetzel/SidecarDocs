@@ -1,0 +1,26 @@
+{
+  "threads": [
+    {
+      "id": "2cc068f0-cb0b-48a8-8acb-2f174b417f4c",
+      "anchor": {
+        "elementType": "p",
+        "elementIndex": 0,
+        "elementText": "All error responses from the comment server follow this shape:",
+        "selectedText": "All error responses from the comment server follow this shape:"
+      },
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "createdAt": "2026-03-11T22:27:09.543Z",
+      "messages": [
+        {
+          "id": "5166453a-5e54-4419-9aac-7962abb5ff25",
+          "text": "Baby baby baby",
+          "author": "Ryan Detzel",
+          "author_id": "102238226508021847763",
+          "createdAt": "2026-03-11T22:27:09.543Z"
+        }
+      ]
+    }
+  ]
+}
