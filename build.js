@@ -3,14 +3,14 @@
 //
 // Usage:
 //   node build.js --input ./docs --output ./dist --server https://comments.example.com \
-//     --site-id <secret> --assets-url https://cdn.example.com/sidecar
+//     --site-id <secret>
 //
 // Options:
 //   --input      DIR    Directory of .md files to process (default: ./docs)
 //   --output     DIR    Output directory for generated HTML (default: ./dist)
 //   --server     URL    Comment server base URL (required)
 //   --site-id    TOKEN  Stable salt for document IDs (required)
-//   --assets-url URL    Base URL for sidecar.css and app.js (required)
+//   --base-path  PATH   URL path prefix for the site root (e.g. /docs). Default: ""
 //   --logo       TEXT   Optional branding label shown top-left of every page
 //   --watch             Re-build when input files change
 
@@ -33,7 +33,6 @@ function parseArgs() {
     output: "./dist",
     server: null,
     siteId: null,
-    assetsUrl: null,
     basePath: "",
     logo: null,
     watch: false,
@@ -44,7 +43,7 @@ function parseArgs() {
     if (args[i] === "--output") result.output = args[++i];
     if (args[i] === "--server") result.server = args[++i];
     if (args[i] === "--site-id") result.siteId = args[++i];
-    if (args[i] === "--assets-url") result.assetsUrl = args[++i];
+    if (args[i] === "--assets-url") { i++; /* ignored, assets are now bundled into output */ }
     if (args[i] === "--base-path") result.basePath = args[++i];
     if (args[i] === "--logo") result.logo = args[++i];
     if (args[i] === "--watch") result.watch = true;
@@ -53,10 +52,7 @@ function parseArgs() {
   const missing = [];
   if (!result.server) missing.push("--server <url>");
   if (!result.siteId) missing.push("--site-id <token>");
-  if (!result.assetsUrl) missing.push("--assets-url <url>");
 
-  // Normalize assetsUrl: strip trailing slash so template interpolation is consistent
-  if (result.assetsUrl) result.assetsUrl = result.assetsUrl.replace(/\/$/, '');
   // Normalize basePath: ensure leading slash, no trailing slash (e.g. "" or "/docs")
   if (result.basePath) {
     result.basePath = '/' + result.basePath.replace(/^\//, '').replace(/\/$/, '');
@@ -68,8 +64,7 @@ function parseArgs() {
     console.error("Example:");
     console.error("  node build.js --input ./docs --output ./dist \\");
     console.error("    --server https://comments.example.com \\");
-    console.error("    --site-id $(cat .site-id) \\");
-    console.error("    --assets-url https://cdn.example.com/sidecar");
+    console.error("    --site-id $(cat .site-id)");
     console.error("");
     console.error("Generate a site ID once and commit it:");
     console.error(
@@ -110,7 +105,7 @@ function generateHtml({
   title,
   documentId,
   serverUrl,
-  assetsUrl,
+  basePath,
   markdown,
   html,
   breadcrumbs,
@@ -122,6 +117,7 @@ function generateHtml({
   // breadcrumbs includes "Index" as the first entry, so depth = length - 1
   const logoHref = "../".repeat(breadcrumbs ? Math.max(0, breadcrumbs.length - 1) : 0) + "index.html";
   const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(logoHref)}">${escapeHtml(logo)}</a></span>` : "";
+  const assetsBase = basePath || "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -129,7 +125,7 @@ function generateHtml({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
-  <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
+  <link rel="stylesheet" href="${assetsBase}/sidecar.css">
   <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
@@ -203,8 +199,8 @@ ${html}
 
   <script>window.SIDECAR_CONFIG = ${configJson};window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
-  <script src="${assetsUrl}/app.js"></script>
-  <script src="${assetsUrl}/search.js"></script>
+  <script src="${assetsBase}/app.js"></script>
+  <script src="${assetsBase}/search.js"></script>
 </body>
 </html>`;
 }
@@ -286,7 +282,8 @@ function renderBreadcrumbs(crumbs, selfHref) {
 
 // ─── Index page ───────────────────────────────────────────────────────────────
 
-function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs, logo, searchIndexUrl }) {
+function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, searchIndexUrl }) {
+  const assetsBase = basePath || "";
   const dirCards = entries.filter((e) => e.type === "dir").map((e) => `
         <a class="index-card index-card--dir" href="${escapeHtml(e.href)}">
           <div class="index-card__icon">&#x1F4C2;</div>
@@ -317,7 +314,7 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs, logo, searc
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
-  <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
+  <link rel="stylesheet" href="${assetsBase}/sidecar.css">
   <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
@@ -346,13 +343,13 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs, logo, searc
   </div>
   <script>window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
-  <script src="${assetsUrl}/search.js"></script>
+  <script src="${assetsBase}/search.js"></script>
   <script>(function(){var el=document.getElementById('theme-select');if(el){el.value=localStorage.getItem('sidecar_theme')||'classic';el.addEventListener('change',function(){document.documentElement.setAttribute('data-theme',el.value);localStorage.setItem('sidecar_theme',el.value);});}})();</script>
 </body>
 </html>`;
 }
 
-function generateIndexPages(outputDir, builtFiles, assetsUrl, logo) {
+function generateIndexPages(outputDir, builtFiles, basePath, logo) {
   // Map from dirPath → [{ name, title, description }]
   const dirFiles = new Map();
 
@@ -413,7 +410,7 @@ function generateIndexPages(outputDir, builtFiles, assetsUrl, logo) {
     const idepth = path.relative(outputDir, dirPath).split(path.sep).filter(Boolean).length;
     const searchIndexUrl = (idepth > 0 ? "../".repeat(idepth) : "") + "search-index.json";
 
-    const indexHtml = generateIndexHtml({ title: dirName, entries, assetsUrl, breadcrumbs, logo, searchIndexUrl });
+    const indexHtml = generateIndexHtml({ title: dirName, entries, basePath, breadcrumbs, logo, searchIndexUrl });
     fs.writeFileSync(indexPath, indexHtml);
 
     const relOut = path.relative(process.cwd(), indexPath);
@@ -427,7 +424,7 @@ function buildFile(filePath, opts) {
   if (!filePath.endsWith(".md")) {
     return null;
   }
-  const { inputDir, outputDir, serverUrl, siteId, assetsUrl, logo } = opts;
+  const { inputDir, outputDir, serverUrl, siteId, basePath, logo } = opts;
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
 
@@ -464,7 +461,7 @@ function buildFile(filePath, opts) {
       title,
       documentId,
       serverUrl,
-      assetsUrl,
+      basePath,
       markdown: content,
       html,
       breadcrumbs,
@@ -478,7 +475,7 @@ function buildFile(filePath, opts) {
 }
 
 function build(args) {
-  const { input, output, server, siteId, assetsUrl, basePath, logo } = args;
+  const { input, output, server, siteId, basePath, logo } = args;
   const inputDir = path.resolve(input);
   const outputDir = path.resolve(output);
 
@@ -497,7 +494,18 @@ function build(args) {
 
   console.log(`Building ${files.length} file(s)...`);
 
-  const opts = { inputDir, outputDir, serverUrl: server, siteId, assetsUrl, logo };
+  // Copy static assets into output so everything is self-contained
+  const staticAssets = ['app.js', 'search.js', 'sidecar.css'];
+  const publicDir = path.join(__dirname, 'public');
+  for (const asset of staticAssets) {
+    const src = path.join(publicDir, asset);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(outputDir, asset));
+      console.log(`  [asset]  → ${path.relative(process.cwd(), path.join(outputDir, asset))}`);
+    }
+  }
+
+  const opts = { inputDir, outputDir, serverUrl: server, siteId, basePath, logo };
   const built = [];
   for (const f of files) {
     const result = buildFile(f, opts);
@@ -509,7 +517,7 @@ function build(args) {
     );
   }
 
-  generateIndexPages(outputDir, built, assetsUrl, logo);
+  generateIndexPages(outputDir, built, basePath, logo);
 
   // Generate search index
   const searchIndex = built.map(({ outPath, title, description, plainText }) => ({
@@ -547,7 +555,7 @@ function watch(args) {
       outputDir: path.resolve(args.output),
       serverUrl: args.server,
       siteId: args.siteId,
-      assetsUrl: args.assetsUrl,
+      basePath: args.basePath,
       logo: args.logo,
     };
 
