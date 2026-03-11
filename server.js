@@ -248,7 +248,7 @@ app.get('/auth/me', (req, res) => {
       JWT_SECRET,
       { expiresIn: '1h' }
     );
-    res.json({ user: { name: session.name, email: session.email, picture: session.picture }, token });
+    res.json({ user: { sub: session.sub, name: session.name, email: session.email, picture: session.picture }, token });
   } catch {
     const isHttps = SERVER_URL.startsWith('https://');
     res.clearCookie('sidecar_session', {
