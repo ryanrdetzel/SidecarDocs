@@ -14,8 +14,6 @@ function apiUrl(path) {
 
 // ─── Auth / identity ──────────────────────────────────────────────────────────
 
-const THEME_KEY = 'sidecar_theme';
-
 let currentUser = null;  // { name, email, picture }
 let authToken = null;    // short-lived JWT, in memory only
 
@@ -41,21 +39,6 @@ async function logout() {
   currentUser = null;
   authToken = null;
   updateAuthorDisplay();
-}
-
-// ─── Theme ────────────────────────────────────────────────────────────────────
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem(THEME_KEY, theme);
-}
-
-function initTheme() {
-  const themeSelect = document.getElementById('theme-select');
-  const saved = localStorage.getItem(THEME_KEY) || 'classic';
-  themeSelect.value = saved;
-  applyTheme(saved);
-  themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -230,6 +213,17 @@ function findMarkdownBlockRange(anchor) {
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+function authorColor(name) {
+  if (!name) return 'var(--accent)';
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 42%)`;
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
@@ -447,6 +441,7 @@ function buildMessageBubble(msg, threadId) {
     const authorEl = document.createElement('span');
     authorEl.className = 'message-author';
     authorEl.textContent = msg.author;
+    authorEl.style.color = authorColor(msg.author);
     metaLeft.appendChild(authorEl);
   }
 
@@ -678,8 +673,14 @@ function buildThreadCard(thread) {
 
     const authorDateEl = document.createElement('span');
     authorDateEl.className = 'comment-date';
-    const authorStr = first.author ? `${first.author} · ` : '';
-    authorDateEl.textContent = authorStr + new Date(first.created_at || first.createdAt).toLocaleString();
+    if (first.author) {
+      const authorSpan = document.createElement('span');
+      authorSpan.textContent = first.author;
+      authorSpan.style.color = authorColor(first.author);
+      authorDateEl.appendChild(authorSpan);
+      authorDateEl.appendChild(document.createTextNode(' · '));
+    }
+    authorDateEl.appendChild(document.createTextNode(new Date(first.created_at || first.createdAt).toLocaleString()));
     meta.appendChild(authorDateEl);
 
     if (thread.resolved) {
@@ -1281,7 +1282,6 @@ function renderNoIdWarning() {
   }
 }
 
-initTheme();
 initSidebar();
 renderNoIdWarning();
 initAuth().then(() => {
