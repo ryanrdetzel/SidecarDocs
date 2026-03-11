@@ -1388,7 +1388,16 @@ function renderNoIdWarning() {
       code2.textContent = 'id: <slug>';
       banner.appendChild(code2);
 
-      banner.appendChild(document.createTextNode(' to the frontmatter to pin its ID.'));
+      banner.appendChild(document.createTextNode(' to the frontmatter to pin its ID. '));
+
+      const learnMore = document.createElement('a');
+      learnMore.href = 'https://ryanrdetzel.github.io/markdown-comment-sidecar/reference/document-ids.html';
+      learnMore.textContent = 'Learn more';
+      learnMore.target = '_blank';
+      learnMore.rel = 'noopener noreferrer';
+      banner.appendChild(learnMore);
+
+      banner.appendChild(document.createTextNode('.'));
 
       const docPane = document.querySelector('.doc-pane');
       if (docPane) docPane.insertBefore(banner, docContent);
