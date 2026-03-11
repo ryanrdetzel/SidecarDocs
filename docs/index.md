@@ -30,14 +30,40 @@ The document itself is never touched. All comment data lives in a separate datab
 - [How It Works](how-it-works.html) — anchoring, document IDs, the data model
 - [API Reference](api.html) — all endpoints documented
 - [Deployment](deployment.html) — self-host the comment server, deploy docs to GitHub Pages
+- [FAQ](faq.html) — common questions answered
+- [Changelog](changelog.html) — what's changed in each release
+
+## Tutorials
+
+Step-by-step walkthroughs for common tasks:
+
+- [Your First Comment](tutorials/first-comment.html) — create, reply, and resolve a thread
+- [Team Setup](tutorials/team-setup.html) — shared comment server, stable IDs, static docs
+- [Migrate from GitHub Issues](tutorials/migrate-from-issues.html) — move existing feedback into the sidecar
+- [Custom Anchoring Strategies](tutorials/advanced/custom-anchoring.html) — section-level, ID-based, and line-number anchoring
+- [Webhooks](tutorials/advanced/webhooks.html) — notify Slack or GitHub when comments are created
 
 ## Reference
 
-- [Reference](reference/index.html) — configuration options and CLI reference
+Detailed technical documentation:
+
+- [Configuration](reference/configuration.html) — all server and build options
+- [CLI](reference/cli.html) — build script flags
+- [Data Model](reference/data-model.html) — schema, fields, and SQLite tips
+- [API Errors](reference/api-errors.html) — error codes and CORS troubleshooting
+- [Anchor Element Types](reference/anchoring/element-types.html) — what elements can be anchored
+- [Drift Detection](reference/anchoring/drift-detection.html) — what happens when documents change
 
 ## Guides
 
-- [Guides](guides/index.html) — step-by-step guides for Docker and GitHub Pages deployment
+Platform-specific deployment guides:
+
+- [Docker](guides/docker.html) — containerize the comment server
+- [GitHub Pages](guides/github-pages.html) — deploy docs to GitHub Pages via Actions
+- [Self-Hosting](guides/self-hosting.html) — VPS, Railway, Render, and other options
+- [VS Code](guides/integrations/vscode.html) — local editing workflow
+- [Obsidian](guides/integrations/obsidian.html) — publish your vault with comments
+- [Notion Exports](guides/integrations/notion.html) — add comments to exported Notion pages
 
 
 ---
